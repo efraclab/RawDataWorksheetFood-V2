@@ -8,6 +8,8 @@ import Login from "../pages/Login/Login";
 import Dashboard from "../pages/Dashboard/Dashboard";
 import Worksheet from "../pages/Worksheet/Worksheet";
 
+import ProtectedRoute from "./ProtectedRoute";
+
 const AppRoutes = () => {
   return (
     <Routes>
@@ -16,15 +18,17 @@ const AppRoutes = () => {
         element={<Login />}
       />
 
-      <Route
-        path="/dashboard"
-        element={<Dashboard />}
-      />
+      <Route element={<ProtectedRoute />}>
+        <Route
+          path="/dashboard"
+          element={<Dashboard />}
+        />
 
-      <Route
-        path="/worksheet"
-        element={<Worksheet />}
-      />
+        <Route
+          path="/worksheet"
+          element={<Worksheet />}
+        />
+      </Route>
 
       <Route
         path="/"

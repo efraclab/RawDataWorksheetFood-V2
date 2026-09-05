@@ -1,5 +1,14 @@
-import { BrowserRouter } from "react-router-dom";
+import {
+  BrowserRouter,
+} from "react-router-dom";
+
 import AppRoutes from "./routes";
+
+import {
+  registerPlugins,
+} from "./plugins";
+
+registerPlugins();
 
 function App() {
   return (

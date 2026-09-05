@@ -9,3 +9,11 @@ export type {
 export {
   PreparationResolver,
 } from "./PreparationResolver";
+
+export {
+  PreparationCapabilityExecutor,
+} from "./PreparationCapabilityExecutor";
+
+export type {
+  PreparationCapability,
+} from "./PreparationCapabilityExecutor";

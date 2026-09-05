@@ -1,14 +1,18 @@
+import AppLayout from "../../shared/layouts/AppLayout";
+
 const Dashboard = () => {
   return (
-    <div className="min-h-screen p-8">
-      <h1 className="text-3xl font-bold">
-        RawDataFoods V2
-      </h1>
+    <AppLayout>
+      <div className="p-8">
+        <h1 className="text-3xl font-bold">
+          Dashboard
+        </h1>
 
-      <p className="mt-2 text-gray-600">
-        Core Platform initialized successfully.
-      </p>
-    </div>
+        <p className="mt-2 text-slate-600">
+          RawDataFoods V2 Dashboard
+        </p>
+      </div>
+    </AppLayout>
   );
 };
 

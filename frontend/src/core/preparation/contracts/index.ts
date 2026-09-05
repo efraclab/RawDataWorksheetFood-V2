@@ -9,3 +9,7 @@ export type {
 export type {
   PreparationResult,
 } from "./PreparationResult";
+
+export type {
+  PreparationCapabilities,
+} from "./PreparationCapabilities";

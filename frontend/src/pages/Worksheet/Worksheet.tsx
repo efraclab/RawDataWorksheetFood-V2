@@ -1,14 +1,18 @@
+import AppLayout from "../../shared/layouts/AppLayout";
+
 const Worksheet = () => {
   return (
-    <div className="min-h-screen p-8">
-      <h1 className="text-2xl font-bold">
-        Worksheet
-      </h1>
+    <AppLayout>
+      <div className="p-8">
+        <h1 className="text-2xl font-bold">
+          Worksheets
+        </h1>
 
-      <p className="mt-2 text-gray-600">
-        Worksheet module will be implemented here.
-      </p>
-    </div>
+        <p className="mt-2 text-slate-600">
+          Worksheet module
+        </p>
+      </div>
+    </AppLayout>
   );
 };
 

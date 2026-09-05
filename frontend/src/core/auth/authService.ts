@@ -1,4 +1,5 @@
 import apiClient from "../api/apiClient";
+
 import type {
   LoginRequest,
   LoginResponse,
@@ -8,10 +9,11 @@ const authService = {
   async login(
     request: LoginRequest
   ): Promise<LoginResponse> {
-    const response = await apiClient.post<LoginResponse>(
-      "/login",
-      request
-    );
+    const response =
+      await apiClient.post<LoginResponse>(
+        "/login",
+        request
+      );
 
     const data = response.data;
 
@@ -38,11 +40,15 @@ const authService = {
   },
 
   getAccessToken(): string | null {
-    return localStorage.getItem("accessToken");
+    return localStorage.getItem(
+      "accessToken"
+    );
   },
 
   isAuthenticated(): boolean {
-    return Boolean(localStorage.getItem("accessToken"));
+    return Boolean(
+      localStorage.getItem("accessToken")
+    );
   },
 };
 
