@@ -3,12 +3,14 @@ import {
   Route,
   Routes,
   useNavigate,
+  useSearchParams,
 } from "react-router-dom";
 
 import Login from "../pages/Login/Login";
 import Dashboard from "../pages/Dashboard/Dashboard";
 import Worksheet from "../pages/Worksheet/Worksheet";
 import ReferenceDataPage from "../pages/ReferenceData/ReferenceDataPage";
+import CreateWorksheetPage from "../pages/CreateWorksheet/CreateWorksheetPage";
 import ProtectedRoute from "./ProtectedRoute";
 
 const DashboardRoute = () => {
@@ -41,13 +43,11 @@ const DashboardRoute = () => {
 
         if (screen === "create") {
           navigate("/worksheet?mode=create");
-
           return;
         }
 
         if (screen === "reference-data") {
           navigate("/reference-data");
-
           return;
         }
       }}
@@ -55,49 +55,44 @@ const DashboardRoute = () => {
   );
 };
 
+const WorksheetRoute = () => {
+  const [searchParams] = useSearchParams();
+
+  if (searchParams.get("mode") === "create") {
+    return <CreateWorksheetPage />;
+  }
+
+  return <Worksheet />;
+};
+
 const AppRoutes = () => {
   return (
     <Routes>
-      {/* =====================================================
-          LOGIN
-          ===================================================== */}
+      {/* LOGIN */}
       <Route
         path="/login"
-        element={
-          <Login
-            onLoginSuccess={() => {
-              window.location.assign("/dashboard");
-            }}
-          />
-        }
+        element={<Login />}
       />
 
-      {/* =====================================================
-          PROTECTED APPLICATION
-          ===================================================== */}
+      {/* PROTECTED APPLICATION */}
       <Route element={<ProtectedRoute />}>
-        {/* Dashboard */}
         <Route
           path="/dashboard"
           element={<DashboardRoute />}
         />
 
-        {/* Worksheet */}
         <Route
           path="/worksheet"
-          element={<Worksheet />}
+          element={<WorksheetRoute />}
         />
 
-        {/* Reference Data Management */}
         <Route
           path="/reference-data"
           element={<ReferenceDataPage />}
         />
       </Route>
 
-      {/* =====================================================
-          DEFAULT
-          ===================================================== */}
+      {/* DEFAULT */}
       <Route
         path="/"
         element={
@@ -108,9 +103,7 @@ const AppRoutes = () => {
         }
       />
 
-      {/* =====================================================
-          UNKNOWN ROUTES
-          ===================================================== */}
+      {/* UNKNOWN ROUTES */}
       <Route
         path="*"
         element={
