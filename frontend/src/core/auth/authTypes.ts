@@ -1,18 +1,16 @@
-export interface AuthUser {
-  id: string;
-  username?: string;
-  name?: string;
-  email?: string;
-  role?: string;
-}
-
 export interface LoginRequest {
-  username: string;
+  employeeId: string;
   password: string;
 }
 
 export interface LoginResponse {
-  accessToken: string;
-  refreshToken?: string;
-  user?: AuthUser;
+  token?: string;
+  message?: string;
+}
+
+export interface AuthUser {
+  employeeId: string;
+  username: string;
+  department: string;
+  role: string;
 }

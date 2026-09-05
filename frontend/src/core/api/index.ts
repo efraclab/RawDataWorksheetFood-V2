@@ -1,4 +1,4 @@
-export { default as apiClient } from "./apiClient";
+export { apiClient } from "./apiClient";
 
 export type {
   ApiResponse,

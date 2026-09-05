@@ -1,8 +1,8 @@
 export {
-  default as worksheetService,
+  worksheetService,
 } from "./worksheetService";
 
 export type {
-  Worksheet,
-  WorksheetQuery,
-} from "./worksheetTypes";
+  FetchWorksheetRequest,
+  WorksheetSummary,
+} from "./worksheetService";
