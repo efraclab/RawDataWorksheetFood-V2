@@ -1,7 +1,5 @@
 import { PluginRegistry } from "../core/plugin";
-
 import { foodPlugin } from "../plugins/food";
-
 import environmentPlugin from "../plugins/environment";
 import waterPlugin from "../plugins/water";
 import gasPlugin from "../plugins/gas";
