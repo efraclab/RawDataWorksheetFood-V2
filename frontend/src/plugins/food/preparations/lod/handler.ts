@@ -143,52 +143,100 @@ export const lodPreparationHandler: PreparationHandler = {
             },
 
         calculate: async (
-                context: PreparationContext
-            ): Promise<PreparationResult> => {
+    context: PreparationContext
+): Promise<PreparationResult> => {
 
-                const data = context.data;
+    const data = context.data;
 
-                const result = calculateLod({
-                    w1: String(data.w1 ?? ""),
-                    w2: String(data.w2 ?? ""),
-                    w3: String(data.w3 ?? ""),
-                    w1Unit: String(data.w1Unit ?? "g"),
-                    w2Unit: String(data.w2Unit ?? "g"),
-                    w3Unit: String(data.w3Unit ?? "g"),
-                });
+    const calculation =
+        data.calculation as
+        | {
+            w1_emptyDish?: string | number;
+            w2_dishWithSample?: string | number;
+            w3_dishAfterIgnition?: string | number;
+          }
+        | undefined;
 
-                if (!result.success) {
-                    return {
-                        success: false,
-                        data: {
-                            ...data,
-                            w1: result.w1,
-                            w2: result.w2,
-                            w3: result.w3,
-                            calculationResult: result.result,
-                            calculationResultUnit: result.unit,
-                        },
-                        errors: result.error
-                            ? [result.error]
-                            : ["LOD calculation failed."],
-                        warnings: [],
-                    };
-                }
 
-                return {
-                    success: true,
-                    data: {
-                        ...data,
-                        w1: result.w1,
-                        w2: result.w2,
-                        w3: result.w3,
-                        calculationResult: result.result,
-                        calculationResultUnit: result.unit,
-                    },
-                    errors: [],
-                    warnings: [],
-                };
+    if (!calculation) {
+
+        return {
+            success: false,
+            data,
+            errors: [
+                "LOD calculation data is required.",
+            ],
+            warnings: [],
+        };
+    }
+
+
+    const result = calculateLod({
+
+        w1:
+            calculation.w1_emptyDish ?? "",
+
+        w2:
+            calculation.w2_dishWithSample ?? "",
+
+        w3:
+            calculation.w3_dishAfterIgnition ?? "",
+
+        w1Unit: "g",
+        w2Unit: "g",
+        w3Unit: "g",
+    });
+
+
+    if (!result.success) {
+
+        return {
+            success: false,
+
+            data: {
+                ...data,
+
+                calculationResult:
+                    result.result,
+
+                calculationResultUnit:
+                    result.unit,
             },
+
+            errors: [
+                result.error ??
+                    "LOD calculation failed.",
+            ],
+
+            warnings: [],
+        };
+    }
+
+
+    return {
+
+        success: true,
+
+        data: {
+
+            ...data,
+
+            w1: result.w1,
+            w2: result.w2,
+            w3: result.w3,
+
+            calculationResult:
+                result.result,
+
+            calculationResultUnit:
+                result.unit,
+        },
+
+        errors: [],
+
+        warnings: [],
+    };
+},
 
     },
 
