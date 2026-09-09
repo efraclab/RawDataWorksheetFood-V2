@@ -1,87 +1,72 @@
+import React from "react";
+
 interface FoodWorksheetInfoProps {
-  sampleName: string;
-  parameterName: string;
-  methodName: string;
+    sampleName: string;
+    parameterName?: string;
+    methodName?: string;
 }
 
-export default function FoodWorksheetInfo({
-  sampleName,
-  parameterName,
-  methodName,
-}: FoodWorksheetInfoProps) {
-  return (
-    <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+const FoodWorksheetInfo: React.FC<FoodWorksheetInfoProps> = ({
+    sampleName,
+    parameterName,
+    methodName,
+}) => {
+    return (
+        <div className="p-0 my-8">
+            <div className="my-4 mb-6 overflow-hidden rounded-xl border border-emerald-900/30 shadow-md">
+                <table className="w-full border-collapse overflow-hidden rounded-xl text-sm shadow-md">
+                    <tbody>
 
-      <div className="grid grid-cols-1">
+                        {/* Sample Particulars */}
+                        <tr className="border-b border-emerald-900/20 transition-colors hover:bg-emerald-50">
+                            <td className="w-10 border-r border-emerald-900/20 bg-gradient-to-br from-emerald-700 to-emerald-900 px-4 py-4 text-center font-bold text-emerald-200">
+                                1
+                            </td>
 
-        <div className="grid grid-cols-[48px_1fr] border-b border-slate-200">
+                            <td className="w-1/3 border-r border-emerald-100 bg-gradient-to-r from-emerald-50 to-white px-4 py-4 font-bold text-emerald-800">
+                                Sample Particulars (All relevant information received with sample to be entered):
+                            </td>
 
-          <div className="flex items-start justify-center bg-emerald-700 py-5 text-sm font-bold text-white">
-            1
-          </div>
+                            <td className="px-3 py-3 font-medium">
+                                {sampleName || "---"}
+                            </td>
+                        </tr>
 
-          <div className="grid grid-cols-1 md:grid-cols-[310px_1fr]">
+                        {/* Tests Required */}
+                        <tr className="border-b border-emerald-900/20 transition-colors hover:bg-emerald-50">
+                            <td className="w-10 border-r border-emerald-900/20 bg-gradient-to-br from-emerald-700 to-emerald-900 px-4 py-4 text-center font-bold text-emerald-200">
+                                2
+                            </td>
 
-            <div className="border-b border-slate-200 bg-emerald-50 px-5 py-5 font-semibold text-emerald-800 md:border-b-0 md:border-r">
-              Sample Particulars
-              <span className="block text-sm">
-                (All relevant information received with sample to be entered):
-              </span>
+                            <td className="w-1/3 border-r border-emerald-100 bg-gradient-to-r from-emerald-50 to-white px-4 py-4 font-bold text-emerald-800">
+                                Test(s) required (all tests and condition to be entered):
+                            </td>
+
+                            <td className="px-3 py-3 font-medium">
+                                {parameterName || "No parameters added"}
+                            </td>
+                        </tr>
+
+                        {/* Method of Analysis */}
+                        <tr className="transition-colors hover:bg-emerald-50">
+                            <td className="w-10 border-r border-emerald-900/20 bg-gradient-to-br from-emerald-700 to-emerald-900 px-4 py-4 text-center font-bold text-emerald-200">
+                                3
+                            </td>
+
+                            <td className="w-1/3 border-r border-emerald-100 bg-gradient-to-r from-emerald-50 to-white px-4 py-4 font-bold text-emerald-800">
+                                Method(s) of Analysis / Testing
+                            </td>
+
+                            <td className="h-16 px-3 py-3 font-medium">
+                                {methodName || "No methods"}
+                            </td>
+                        </tr>
+
+                    </tbody>
+                </table>
             </div>
-
-            <div className="px-5 py-5 text-slate-800">
-              {sampleName || "—"}
-            </div>
-
-          </div>
         </div>
+    );
+};
 
-
-        <div className="grid grid-cols-[48px_1fr] border-b border-slate-200">
-
-          <div className="flex items-start justify-center bg-emerald-700 py-5 text-sm font-bold text-white">
-            2
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-[310px_1fr]">
-
-            <div className="border-b border-slate-200 bg-emerald-50 px-5 py-5 font-semibold text-emerald-800 md:border-b-0 md:border-r">
-              Test(s) required
-              <span className="block text-sm">
-                (all tests and condition to be entered):
-              </span>
-            </div>
-
-            <div className="px-5 py-5 text-slate-800">
-              {parameterName || "—"}
-            </div>
-
-          </div>
-        </div>
-
-
-        <div className="grid grid-cols-[48px_1fr]">
-
-          <div className="flex items-start justify-center bg-emerald-700 py-5 text-sm font-bold text-white">
-            3
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-[310px_1fr]">
-
-            <div className="bg-emerald-50 px-5 py-5 font-semibold text-emerald-800 md:border-r">
-              Method(s) of Analysis / Testing
-            </div>
-
-            <div className="px-5 py-5 text-slate-800">
-              {methodName || "No methods"}
-            </div>
-
-          </div>
-
-        </div>
-
-      </div>
-
-    </div>
-  );
-}
+export default FoodWorksheetInfo;

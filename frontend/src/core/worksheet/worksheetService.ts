@@ -33,8 +33,12 @@ export interface WorksheetSummary {
   lab?: string;
 }
 
-export const worksheetService = {
+export interface FetchSampleRequest {
+  regNo: string;
+  lab: string;
+}
 
+export const worksheetService = {
   async getAll(
     request: FetchWorksheetRequest
   ): Promise<WorksheetSummary[]> {
@@ -57,19 +61,48 @@ export const worksheetService = {
     }
   },
 
-    async getById(
-    worksheetId: string,
-    request: FetchWorksheetRequest
-  ): Promise<WorksheetDetail | null> {
-
-    if (!worksheetId) {
-      throw new Error(
-        "Worksheet ID is required."
-      );
+  /**
+   * V1-compatible parameter catalogue.
+   *
+   * V1 calls POST /sample-details with registration number
+   * and laboratory. The response is the list of parameters
+   * available for the worksheet.
+   */
+  async getAvailableParameters(
+    request: FetchSampleRequest
+  ): Promise<import("../../plugins/food/models/SampleData").SampleData[]> {
+    if (!request?.regNo) {
+      throw new Error("Registration Number is required.");
     }
 
     try {
+      const response =
+        await apiClient.post<
+          import("../../plugins/food/models/SampleData").SampleData[]
+        >("/sample-details", request);
 
+      return Array.isArray(response.data)
+        ? response.data
+        : [];
+    } catch (error: any) {
+      throw new Error(
+        error?.response?.data?.error ||
+          `Failed to fetch samples for ${request.regNo}: ${
+            error?.message ?? "Unknown error"
+          }`
+      );
+    }
+  },
+
+  async getById(
+    worksheetId: string,
+    request: FetchWorksheetRequest
+  ): Promise<WorksheetDetail | null> {
+    if (!worksheetId) {
+      throw new Error("Worksheet ID is required.");
+    }
+
+    try {
       const response =
         await apiClient.post<WorksheetDetail>(
           `/worksheets/get/${worksheetId}`,
@@ -82,20 +115,13 @@ export const worksheetService = {
         return null;
       }
 
-      if (
-        data.sample ||
-        data.parameters
-      ) {
+      if (data.sample || data.parameters) {
         return data;
       }
 
       return null;
-
     } catch (error: any) {
-
-      if (
-        error?.response?.status === 404
-      ) {
+      if (error?.response?.status === 404) {
         return null;
       }
 
@@ -112,9 +138,7 @@ export const worksheetService = {
     worksheetId: string
   ): Promise<void> {
     if (!worksheetId) {
-      throw new Error(
-        "Worksheet ID is required."
-      );
+      throw new Error("Worksheet ID is required.");
     }
 
     try {
