@@ -1,4 +1,8 @@
 import { apiClient } from "../api";
+import type { Analyst } from "../../plugins/food/models/Analyst";
+import type { Instrument } from "../../plugins/food/models/Instrument";
+import type { Chemical } from "../../plugins/food/models/Chemical";
+import type { Standard } from "../../plugins/food/models/Standard";
 
 export interface FetchWorksheetRequest {
   employeeId: string;
@@ -38,6 +42,13 @@ export interface FetchSampleRequest {
   lab: string;
 }
 
+export interface RelatedWorksheetSuggestion {
+  worksheetId: string;
+  sampleName?: string;
+  parameterName?: string;
+  createdAt?: string;
+}
+
 export const worksheetService = {
   async getAll(
     request: FetchWorksheetRequest
@@ -68,6 +79,37 @@ export const worksheetService = {
    * and laboratory. The response is the list of parameters
    * available for the worksheet.
    */
+  /**
+   * V1-compatible analyst catalogue.
+   * V1 calls GET /worksheets/analysts.
+   */
+  async getAnalysts(): Promise<Analyst[]> {
+    try {
+      const response = await apiClient.get<
+        Analyst[] | { data?: Analyst[] }
+      >("/worksheets/analysts");
+
+      const data = response.data;
+
+      if (Array.isArray(data)) {
+        return data;
+      }
+
+      if (data && Array.isArray(data.data)) {
+        return data.data;
+      }
+
+      return [];
+    } catch (error: any) {
+      throw new Error(
+        error?.response?.data?.message ||
+          `Failed to fetch analysts: ${
+            error?.message ?? "Unknown error"
+          }`
+      );
+    }
+  },
+
   async getAvailableParameters(
     request: FetchSampleRequest
   ): Promise<import("../../plugins/food/models/SampleData").SampleData[]> {
@@ -88,6 +130,56 @@ export const worksheetService = {
       throw new Error(
         error?.response?.data?.error ||
           `Failed to fetch samples for ${request.regNo}: ${
+            error?.message ?? "Unknown error"
+          }`
+      );
+    }
+  },
+
+  async getRelatedWorksheetsBySample(
+    sampleName: string,
+    excludeWorksheetId: string,
+    request: FetchWorksheetRequest
+  ): Promise<RelatedWorksheetSuggestion[]> {
+    if (!sampleName) return [];
+
+    try {
+      const all = await this.getAll(request);
+      const normalizedTarget = sampleName.trim().toLowerCase();
+
+      return (all || [])
+        .filter((worksheet: any) => {
+          const id = worksheet.worksheetId ?? worksheet.id;
+          const name =
+            worksheet.sampleName ??
+            worksheet.sample?.sampleName ??
+            "";
+
+          return (
+            id &&
+            id !== excludeWorksheetId &&
+            String(name).trim().toLowerCase() === normalizedTarget
+          );
+        })
+        .sort((a: any, b: any) => {
+          const dateA = new Date(a.createdAt ?? 0).getTime();
+          const dateB = new Date(b.createdAt ?? 0).getTime();
+          return dateB - dateA;
+        })
+        .map((worksheet: any) => ({
+          worksheetId: worksheet.worksheetId ?? worksheet.id,
+          sampleName:
+            worksheet.sampleName ?? worksheet.sample?.sampleName,
+          parameterName:
+            worksheet.parameterName ??
+            worksheet.testName ??
+            worksheet.testCode,
+          createdAt: worksheet.createdAt,
+        }));
+    } catch (error: any) {
+      throw new Error(
+        error?.response?.data?.message ||
+          `Failed to fetch related worksheets: ${
             error?.message ?? "Unknown error"
           }`
       );
@@ -154,4 +246,18 @@ export const worksheetService = {
       );
     }
   },
+  async getInstruments(): Promise<Instrument[]> {
+  const response = await apiClient.get<Instrument[]>("/instruments");
+  return Array.isArray(response.data) ? response.data : [];
+},
+
+async getChemicals(): Promise<Chemical[]> {
+  const response = await apiClient.get<Chemical[]>("/chemicals");
+  return Array.isArray(response.data) ? response.data : [];
+},
+
+async getStandards(): Promise<Standard[]> {
+  const response = await apiClient.get<Standard[]>("/standards");
+  return Array.isArray(response.data) ? response.data : [];
+},
 };

@@ -6,6 +6,10 @@ import {
   Hash,
   FlaskConical,
   Save,
+  CheckCircle2,
+  ClipboardCheck,
+  ShieldCheck,
+  Printer,
 } from "lucide-react";
 
 interface WorksheetShellProps {
@@ -16,7 +20,27 @@ interface WorksheetShellProps {
   sampleName: string;
 
   onBack?: () => void;
+
+  // Worksheet actions
   onSaveDraft?: () => void;
+  onSubmitForAnalysis?: () => void;
+  onSubmitForQA?: () => void;
+  onApproveWorksheet?: () => void;
+  onPrintReport?: () => void;
+
+  // Worksheet action visibility
+  showSaveDraft?: boolean;
+  showSubmitForAnalysis?: boolean;
+  showSubmitForQA?: boolean;
+  showApproveWorksheet?: boolean;
+  showPrintReport?: boolean;
+
+  // Worksheet action state
+  isSaving?: boolean;
+  saveSuccess?: boolean;
+  isSubmitting?: boolean;
+  isSubmittingForQA?: boolean;
+  isApprovingWorksheet?: boolean;
 
   children: ReactNode;
 }
@@ -45,9 +69,39 @@ export default function WorksheetShell({
   sampleName,
   onBack,
   onSaveDraft,
+  onSubmitForAnalysis,
+  onSubmitForQA,
+  onApproveWorksheet,
+  onPrintReport,
+
+  showSaveDraft = true,
+  showSubmitForAnalysis = false,
+  showSubmitForQA = false,
+  showApproveWorksheet = false,
+  showPrintReport = false,
+
+  isSaving = false,
+  saveSuccess = false,
+  isSubmitting = false,
+  isSubmittingForQA = false,
+  isApprovingWorksheet = false,
+
   children,
 }: WorksheetShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // Defensive worksheet-level rule:
+  // Print Report is only valid after QA approval, represented by the
+  // final worksheet status "Approved".
+  const normalizedShellStatus = String(status ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .replace(/\\s+/g, " ");
+
+  const canShowPrintReport =
+    showPrintReport &&
+    normalizedShellStatus === "approved";
 
   return (
     <div
@@ -594,37 +648,286 @@ export default function WorksheetShell({
 
                   {/* SAVE DRAFT */}
 
-                  <button
-                    type="button"
-                    onClick={onSaveDraft}
-                    className="
-                      mt-[10px]
-                      flex
-                      h-[43px]
-                      w-full
-                      items-center
-                      justify-start
-                      gap-[9px]
-                      rounded-[11px]
-                      border-0
-                      bg-[#00b77f]
-                      px-[18px]
-                      text-[13px]
-                      font-semibold
-                      text-white
-                      shadow-[0_3px_6px_rgba(0,183,127,0.25)]
-                      transition
-                      hover:bg-[#00aa77]
-                      active:scale-[0.99]
-                    "
-                  >
-                    <Save
-                      size={15}
-                      strokeWidth={2}
-                    />
+                  {showSaveDraft && (
+                    <button
+                      type="button"
+                      onClick={onSaveDraft}
+                      disabled={isSaving}
+                      className="
+                        relative
+                        mt-[10px]
+                        flex
+                        h-[43px]
+                        w-full
+                        items-center
+                        justify-start
+                        gap-[9px]
+                        rounded-[11px]
+                        border-0
+                        bg-[#00b77f]
+                        px-[18px]
+                        text-[13px]
+                        font-semibold
+                        text-white
+                        shadow-[0_3px_6px_rgba(0,183,127,0.25)]
+                        transition
+                        hover:bg-[#00aa77]
+                        active:scale-[0.99]
+                        disabled:cursor-not-allowed
+                        disabled:opacity-60
+                      "
+                    >
+                      {isSaving ? (
+                        <span
+                          className="
+                            h-[15px]
+                            w-[15px]
+                            animate-spin
+                            rounded-full
+                            border-2
+                            border-white/40
+                            border-t-white
+                          "
+                        />
+                      ) : (
+                        <Save
+                          size={15}
+                          strokeWidth={2}
+                        />
+                      )}
 
-                    <span>Save Draft</span>
-                  </button>
+                      <span>
+                        {isSaving ? "Saving..." : "Save Draft"}
+                      </span>
+
+                      {saveSuccess && !isSaving && (
+                        <CheckCircle2
+                          className="ml-auto"
+                          size={15}
+                          strokeWidth={2}
+                        />
+                      )}
+                    </button>
+                  )}
+
+                  {/* SUBMIT FOR ANALYSIS */}
+
+                  {showSubmitForAnalysis && (
+                    <button
+                      type="button"
+                      onClick={onSubmitForAnalysis}
+                      disabled={isSubmitting}
+                      className="
+                        mt-[10px]
+                        flex
+                        h-[43px]
+                        w-full
+                        items-center
+                        justify-start
+                        gap-[9px]
+                        rounded-[11px]
+                        border-0
+                        bg-gradient-to-r
+                        from-sky-500
+                        to-blue-700
+                        px-[18px]
+                        text-[13px]
+                        font-semibold
+                        text-white
+                        shadow-[0_3px_8px_rgba(37,99,235,0.28)]
+                        transition
+                        hover:from-sky-400
+                        hover:to-blue-600
+                        active:scale-[0.99]
+                        disabled:cursor-not-allowed
+                        disabled:opacity-60
+                      "
+                    >
+                      {isSubmitting ? (
+                        <span
+                          className="
+                            h-[15px]
+                            w-[15px]
+                            animate-spin
+                            rounded-full
+                            border-2
+                            border-white/40
+                            border-t-white
+                          "
+                        />
+                      ) : (
+                        <CheckCircle2
+                          size={15}
+                          strokeWidth={2}
+                        />
+                      )}
+
+                      <span>
+                        {isSubmitting
+                          ? "Submitting..."
+                          : "Submit for Analysis"}
+                      </span>
+                    </button>
+                  )}
+
+                  {/* SUBMIT FOR QA REVIEW */}
+
+                  {showSubmitForQA && (
+                    <button
+                      type="button"
+                      onClick={onSubmitForQA}
+                      disabled={isSubmittingForQA}
+                      className="
+                        mt-[10px]
+                        flex
+                        h-[43px]
+                        w-full
+                        items-center
+                        justify-start
+                        gap-[9px]
+                        rounded-[11px]
+                        border-0
+                        bg-gradient-to-r
+                        from-violet-500
+                        to-purple-700
+                        px-[18px]
+                        text-[13px]
+                        font-semibold
+                        text-white
+                        shadow-[0_3px_8px_rgba(124,58,237,0.28)]
+                        transition
+                        hover:from-violet-400
+                        hover:to-purple-600
+                        active:scale-[0.99]
+                        disabled:cursor-not-allowed
+                        disabled:opacity-60
+                      "
+                    >
+                      {isSubmittingForQA ? (
+                        <span
+                          className="
+                            h-[15px]
+                            w-[15px]
+                            animate-spin
+                            rounded-full
+                            border-2
+                            border-white/40
+                            border-t-white
+                          "
+                        />
+                      ) : (
+                        <ClipboardCheck
+                          size={15}
+                          strokeWidth={2}
+                        />
+                      )}
+
+                      <span>
+                        {isSubmittingForQA
+                          ? "Submitting..."
+                          : "Submit for QA Review"}
+                      </span>
+                    </button>
+                  )}
+
+                  {/* APPROVE WORKSHEET */}
+
+                  {showApproveWorksheet && (
+                    <button
+                      type="button"
+                      onClick={onApproveWorksheet}
+                      disabled={isApprovingWorksheet}
+                      className="
+                        mt-[10px]
+                        flex
+                        h-[43px]
+                        w-full
+                        items-center
+                        justify-start
+                        gap-[9px]
+                        rounded-[11px]
+                        border-0
+                        bg-gradient-to-r
+                        from-green-500
+                        to-green-700
+                        px-[18px]
+                        text-[13px]
+                        font-semibold
+                        text-white
+                        shadow-[0_3px_8px_rgba(22,163,74,0.28)]
+                        transition
+                        hover:from-green-400
+                        hover:to-green-600
+                        active:scale-[0.99]
+                        disabled:cursor-not-allowed
+                        disabled:opacity-60
+                      "
+                    >
+                      {isApprovingWorksheet ? (
+                        <span
+                          className="
+                            h-[15px]
+                            w-[15px]
+                            animate-spin
+                            rounded-full
+                            border-2
+                            border-white/40
+                            border-t-white
+                          "
+                        />
+                      ) : (
+                        <ShieldCheck
+                          size={15}
+                          strokeWidth={2}
+                        />
+                      )}
+
+                      <span>
+                        {isApprovingWorksheet
+                          ? "Approving..."
+                          : "Approve Worksheet"}
+                      </span>
+                    </button>
+                  )}
+
+                  {/* PRINT REPORT */}
+
+                  {canShowPrintReport && (
+                    <button
+                      type="button"
+                      onClick={onPrintReport}
+                      className="
+                        mt-[10px]
+                        flex
+                        h-[43px]
+                        w-full
+                        items-center
+                        justify-start
+                        gap-[9px]
+                        rounded-[11px]
+                        border-0
+                        bg-gradient-to-r
+                        from-slate-600
+                        to-slate-800
+                        px-[18px]
+                        text-[13px]
+                        font-semibold
+                        text-white
+                        shadow-[0_3px_8px_rgba(71,85,105,0.25)]
+                        transition
+                        hover:from-slate-500
+                        hover:to-slate-700
+                        active:scale-[0.99]
+                      "
+                    >
+                      <Printer
+                        size={15}
+                        strokeWidth={2}
+                      />
+
+                      <span>Print Report</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
