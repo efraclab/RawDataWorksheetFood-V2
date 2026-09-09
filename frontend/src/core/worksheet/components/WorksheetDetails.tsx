@@ -14,6 +14,10 @@ import AnalystSelectionDialog from "../../../plugins/food/components/dialogs/Ana
 import type { ParameterDetail } from "../../../plugins/food/models/ParameterDetail";
 import type { SampleData } from "../../../plugins/food/models/SampleData";
 import type { Analyst } from "../../../plugins/food/models/Analyst";
+import FoodSystemSuitability from "../../../plugins/food/components/worksheet/FoodSystemSuitability";
+import FoodParameterFiles from "../../../plugins/food/components/worksheet/FoodParameterFiles";
+import type { SystemSuitability } from "../../../plugins/food/models/SystemSuitability";
+import type { AttachedFile } from "../../../plugins/food/models/AttachedFile";
 import FoodAdditionalInfo from "../../../plugins/food/components/worksheet/FoodAdditionalInfo";
 import FoodInstrumentSection from "../../../plugins/food/components/worksheet/FoodInstrumentSection";
 import FoodChemicalSection from "../../../plugins/food/components/worksheet/FoodChemicalSection";
@@ -84,6 +88,185 @@ export default function WorksheetDetails({
 
   const [analysts, setAnalysts] =
     useState<Analyst[]>([]);
+
+  // ============================================================
+  // V1 SYSTEM SUITABILITY / PARAMETER FILES
+  // State is maintained per parameter exactly like V1.
+  // ============================================================
+
+  const [systemSuitabilityPerParam, setSystemSuitabilityPerParam] =
+    useState<Record<number, SystemSuitability[]>>({});
+
+  const [showSystemSuitability, setShowSystemSuitability] =
+    useState<Record<number, boolean>>({});
+
+  const [showParamFiles, setShowParamFiles] =
+    useState<Record<number, boolean>>({});
+
+  const showParamFilesForParameter = (parameterId: number) =>
+    Boolean(showParamFiles[parameterId]);
+
+  const [filesPerParam, setFilesPerParam] =
+    useState<Record<number, Record<string, AttachedFile[]>>>({});
+
+  const PARAM_LEVEL_KEY = "param_level";
+
+  const getParamLevelFiles = (parameterId: number): AttachedFile[] =>
+    (filesPerParam[parameterId] ?? {})[PARAM_LEVEL_KEY] ?? [];
+
+  const updateFilesForSlot = (
+    parameterId: number,
+    slotKey: string,
+    updater: (prev: AttachedFile[]) => AttachedFile[]
+  ) => {
+    setFilesPerParam((prev) => ({
+      ...prev,
+      [parameterId]: {
+        ...(prev[parameterId] ?? {}),
+        [slotKey]: updater(
+          (prev[parameterId] ?? {})[slotKey] ?? []
+        ),
+      },
+    }));
+  };
+
+  const handleAddParamFiles = (
+    parameterId: number,
+    newFiles: AttachedFile[]
+  ) => {
+    updateFilesForSlot(
+      parameterId,
+      PARAM_LEVEL_KEY,
+      (prev) => [...prev, ...newFiles]
+    );
+  };
+
+  const handleRemoveParamFile = (
+    parameterId: number,
+    index: number
+  ) => {
+    updateFilesForSlot(
+      parameterId,
+      PARAM_LEVEL_KEY,
+      (prev) => prev.filter((_, i) => i !== index)
+    );
+  };
+
+  const createNewSystemSuitability = (
+    index: number
+  ): SystemSuitability => ({
+    id: Date.now() + index,
+    label: `System Suitability ${index + 1}`,
+    steps: [
+      { name: "RSD Area", value1: "", value2: "", value3: "", value4: "" },
+      { name: "RSD Retention time", value1: "", value2: "", value3: "", value4: "" },
+      { name: "Tailing factor", value1: "", value2: "", value3: "", value4: "" },
+      { name: "Resolution", value1: "", value2: "", value3: "", value4: "" },
+      { name: "Theorital Plate count", value1: "", value2: "", value3: "", value4: "" },
+      { name: "Peak to Valley ratio", value1: "", value2: "", value3: "", value4: "" },
+    ],
+  });
+
+  const handleAddSystemSuitability = (parameterId: number) => {
+    setSystemSuitabilityPerParam((prev) => {
+      const current = prev[parameterId] || [];
+      return {
+        ...prev,
+        [parameterId]: [
+          ...current,
+          createNewSystemSuitability(current.length),
+        ],
+      };
+    });
+  };
+
+  const handleRemoveSystemSuitability = (
+    parameterId: number,
+    suitabilityId: number
+  ) => {
+    setSystemSuitabilityPerParam((prev) => {
+      const updated = (prev[parameterId] || [])
+        .filter((ss) => ss.id !== suitabilityId)
+        .map((ss, index) => ({
+          ...ss,
+          label: `System Suitability ${index + 1}`,
+        }));
+
+      return { ...prev, [parameterId]: updated };
+    });
+  };
+
+  const handleSystemSuitabilityStepChange = (
+    parameterId: number,
+    suitabilityId: number,
+    stepName: string,
+    field: "value1" | "value2" | "value3" | "value4",
+    newValue: string
+  ) => {
+    setSystemSuitabilityPerParam((prev) => ({
+      ...prev,
+      [parameterId]: (prev[parameterId] || []).map((ss) =>
+        ss.id !== suitabilityId
+          ? ss
+          : {
+              ...ss,
+              steps: ss.steps.map((step) =>
+                step.name === stepName
+                  ? { ...step, [field]: newValue }
+                  : step
+              ),
+            }
+      ),
+    }));
+  };
+
+  const handleAddSystemSuitabilityStep = (
+    parameterId: number,
+    suitabilityId: number,
+    stepName: string,
+    limitType?: string
+  ) => {
+    setSystemSuitabilityPerParam((prev) => ({
+      ...prev,
+      [parameterId]: (prev[parameterId] || []).map((ss) => {
+        if (ss.id !== suitabilityId) return ss;
+        if (ss.steps.some((step) => step.name === stepName)) return ss;
+
+        return {
+          ...ss,
+          steps: [
+            ...ss.steps,
+            {
+              name: stepName,
+              limitType,
+              value1: "",
+              value2: "",
+              value3: "",
+              value4: "",
+            },
+          ],
+        };
+      }),
+    }));
+  };
+
+  const handleRemoveSystemSuitabilityStep = (
+    parameterId: number,
+    suitabilityId: number,
+    stepName: string
+  ) => {
+    setSystemSuitabilityPerParam((prev) => ({
+      ...prev,
+      [parameterId]: (prev[parameterId] || []).map((ss) =>
+        ss.id !== suitabilityId
+          ? ss
+          : {
+              ...ss,
+              steps: ss.steps.filter((step) => step.name !== stepName),
+            }
+      ),
+    }));
+  };
 
   // ============================================================
   // V1 REFERENCE DATA / PARAMETER SECTION STATE
@@ -416,6 +599,37 @@ export default function WorksheetDetails({
     const restoredShowMobile: Record<number, boolean> = {};
     const restoredDiluents: Record<number, DiluentPreparation[]> = {};
     const restoredShowDiluent: Record<number, boolean> = {};
+
+    const restoredSuitabilities: Record<number, SystemSuitability[]> = {};
+    const restoredParamFiles: Record<number, Record<string, AttachedFile[]>> = {};
+
+    restoredParameters.forEach((parameter: any) => {
+      const parameterId = parameter.id as number;
+      const rawSuitabilities =
+        parameter?.systemSuitabilities ??
+        parameter?.systemSuitability ??
+        [];
+
+      if (Array.isArray(rawSuitabilities)) {
+        restoredSuitabilities[parameterId] =
+          rawSuitabilities as SystemSuitability[];
+      }
+
+      if (Array.isArray(parameter?.files)) {
+        restoredParamFiles[parameterId] = {
+          [PARAM_LEVEL_KEY]: parameter.files.map((file: any) => ({
+            id: typeof file?.id === "number" ? file.id : 0,
+            fileName: file?.fileName ?? "",
+            fileDataBase64: file?.fileDataBase64 ?? null,
+            preparationType: file?.preparationType ?? null,
+            label: file?.label ?? "Other Files",
+          })),
+        };
+      }
+    });
+
+    setSystemSuitabilityPerParam(restoredSuitabilities);
+    setFilesPerParam(restoredParamFiles);
 
     restoredParameters.forEach((parameter: ParameterDetail) => {
       restoredInstruments[parameter.id] = parameter.instruments ?? [];
@@ -1868,6 +2082,113 @@ setAddedParameters(restoredParameters);
                     data
                   )
                 }
+              />
+            </>
+          )}
+
+
+          {selectedParameter && (
+            <>
+              <FoodSystemSuitability
+                parameterId={selectedParameter.id}
+                enabled={
+                  showSystemSuitability[selectedParameter.id] || false
+                }
+                systemSuitabilities={
+                  systemSuitabilityPerParam[selectedParameter.id] || []
+                }
+                onToggle={(checked) =>
+                  setShowSystemSuitability((prev) => ({
+                    ...prev,
+                    [selectedParameter.id]: checked,
+                  }))
+                }
+                onAdd={() =>
+                  handleAddSystemSuitability(selectedParameter.id)
+                }
+                onRemove={(id) =>
+                  handleRemoveSystemSuitability(
+                    selectedParameter.id,
+                    id
+                  )
+                }
+                onStepChange={(
+                  suitabilityId,
+                  stepName,
+                  field,
+                  value
+                ) =>
+                  handleSystemSuitabilityStepChange(
+                    selectedParameter.id,
+                    suitabilityId,
+                    stepName,
+                    field,
+                    value
+                  )
+                }
+                onAddStep={(
+                  suitabilityId,
+                  stepName,
+                  limitType
+                ) =>
+                  handleAddSystemSuitabilityStep(
+                    selectedParameter.id,
+                    suitabilityId,
+                    stepName,
+                    limitType
+                  )
+                }
+                onRemoveStep={(
+                  suitabilityId,
+                  stepName
+                ) =>
+                  handleRemoveSystemSuitabilityStep(
+                    selectedParameter.id,
+                    suitabilityId,
+                    stepName
+                  )
+                }
+                isLocked={false}
+              />
+
+              <FoodParameterFiles
+                parameterId={selectedParameter.id}
+                enabled={
+                  Boolean(
+                    getParamLevelFiles(selectedParameter.id).length > 0 ||
+                    showParamFilesForParameter(
+                      selectedParameter.id
+                    )
+                  )
+                }
+                files={getParamLevelFiles(selectedParameter.id)}
+                onToggle={(checked) => {
+                  setShowParamFiles((prev) => ({
+                    ...prev,
+                    [selectedParameter.id]: checked,
+                  }));
+
+                  if (!checked) {
+                    updateFilesForSlot(
+                      selectedParameter.id,
+                      PARAM_LEVEL_KEY,
+                      () => []
+                    );
+                  }
+                }}
+                onAdd={(newFiles) =>
+                  handleAddParamFiles(
+                    selectedParameter.id,
+                    newFiles
+                  )
+                }
+                onRemove={(index) =>
+                  handleRemoveParamFile(
+                    selectedParameter.id,
+                    index
+                  )
+                }
+                isLocked={false}
               />
             </>
           )}
