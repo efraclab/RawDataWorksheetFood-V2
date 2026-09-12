@@ -1,5 +1,4 @@
 import React from "react";
-import { Plus } from "lucide-react";
 
 export interface PreparationStep {
     readonly id?: string | number;
@@ -9,112 +8,53 @@ export interface PreparationStep {
 export interface SamplePreparationStepsProps<TStep extends PreparationStep> {
     steps: readonly TStep[];
     isLocked?: boolean;
-
     onAddStep?: () => void;
     onRemoveStep?: (step: TStep, index: number) => void;
-
-    renderStep: (
-        step: TStep,
-        index: number,
-        isLocked: boolean
-    ) => React.ReactNode;
+    renderStep: (step: TStep, index: number, isLocked: boolean) => React.ReactNode;
 }
 
-const SamplePreparationSteps = <
-    TStep extends PreparationStep
->({
+const SamplePreparationSteps = <TStep extends PreparationStep>({
     steps,
     isLocked = false,
-    onAddStep,
-    onRemoveStep,
+    onAddStep: _onAddStep,
+    onRemoveStep: _onRemoveStep,
     renderStep,
 }: SamplePreparationStepsProps<TStep>) => {
-    return (
-        <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h4 className="text-lg font-semibold text-emerald-900">
-                        Preparation Steps
-                    </h4>
-
-                    <p className="mt-1 text-sm text-emerald-700">
-                        Configure the steps required to complete this
-                        preparation.
-                    </p>
-                </div>
-
-                {onAddStep && (
-                    <button
-                        type="button"
-                        onClick={onAddStep}
-                        disabled={isLocked}
-                        className="inline-flex items-center gap-2 rounded-lg border border-emerald-300 bg-white px-3 py-2 text-sm font-medium text-emerald-800 transition hover:border-emerald-500 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                        <Plus className="h-4 w-4" />
-                        Add Step
-                    </button>
-                )}
+    if (steps.length === 0) {
+        return (
+            <div className="rounded-xl border border-dashed border-emerald-300 bg-emerald-50/40 px-5 py-8 text-center">
+                <p className="text-sm font-medium text-emerald-800">
+                    No preparation steps configured.
+                </p>
             </div>
+        );
+    }
 
-            {steps.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-emerald-300 bg-emerald-50/40 px-5 py-8 text-center">
-                    <p className="text-sm font-medium text-emerald-800">
-                        No preparation steps configured.
-                    </p>
-
-                    {onAddStep && (
-                        <button
-                            type="button"
-                            onClick={onAddStep}
-                            disabled={isLocked}
-                            className="mt-3 inline-flex items-center gap-2 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                            <Plus className="h-4 w-4" />
-                            Add Step
-                        </button>
-                    )}
-                </div>
-            ) : (
-                <div className="space-y-3">
-                    {steps.map((step, index) => (
-                        <div
-                            key={step.id ?? index}
-                            className="rounded-xl border border-emerald-200 bg-white p-4 shadow-sm"
-                        >
-                            <div className="mb-3 flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-800">
-                                        {index + 1}
-                                    </div>
-
-                                    <span className="font-semibold text-emerald-900">
-                                        {step.name}
-                                    </span>
-                                </div>
-
-                                {onRemoveStep && (
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            onRemoveStep(step, index)
-                                        }
-                                        disabled={isLocked}
-                                        className="rounded-lg px-3 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
-                                    >
-                                        Remove
-                                    </button>
-                                )}
-                            </div>
-
-                            {renderStep(
-                                step,
-                                index,
-                                isLocked
-                            )}
+    return (
+        <div className="space-y-3">
+            {steps.map((step, index) => (
+                <div
+                    key={step.id ?? index}
+                    className="rounded-xl border border-emerald-200 bg-white px-4 py-4 shadow-sm"
+                >
+                    <div className="mb-3 flex items-center gap-3">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-700 to-slate-800 text-sm font-bold text-white shadow-sm">
+                            {index + 1}
                         </div>
-                    ))}
+
+                        <div className="relative flex min-w-0 flex-1 items-center">
+                            <span className="absolute left-0 top-1/2 h-px w-full bg-emerald-100" />
+                            <span className="relative bg-white pr-3 text-sm font-bold text-emerald-900">
+                                {step.name}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="pl-11">
+                        {renderStep(step, index, isLocked)}
+                    </div>
                 </div>
-            )}
+            ))}
         </div>
     );
 };
