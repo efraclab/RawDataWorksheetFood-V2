@@ -1,90 +1,70 @@
 import React from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Check } from "lucide-react";
 
-import { Plus } from "lucide-react";
+import type { PreparationModuleDefinition } from "../../preparation/ui/PreparationModuleDefinition";
 
-import type {
-    PreparationModuleDefinition,
-} from "../../preparation/ui/PreparationModuleDefinition";
-
-export interface PreparationDropdownProps {
-    registry:
-        readonly PreparationModuleDefinition[];
-
+interface Props {
+    open: boolean;
+    groups: readonly PreparationModuleDefinition[];
     activeGroups: string[];
-
-    onAddPreparation: (
-        preparationId: string
-    ) => void;
-
-    disabled?: boolean;
+    onSelect: (groupId: string) => void;
 }
 
-const PreparationDropdown: React.FC<
-    PreparationDropdownProps
-> = ({
-    registry,
+const PreparationDropdown: React.FC<Props> = ({
+    open,
+    groups,
     activeGroups,
-    onAddPreparation,
-    disabled = false,
+    onSelect,
 }) => {
-    const availablePreparations =
-        registry.filter(
-            (preparation) =>
-                !activeGroups.includes(
-                    preparation.id
-                )
-        );
-
-    if (
-        availablePreparations.length ===
-        0
-    ) {
-        return null;
-    }
-
     return (
-        <div className="relative inline-block">
-            <select
-                value=""
-                disabled={disabled}
-                onChange={(event) => {
-                    const preparationId =
-                        event.target.value;
+        <AnimatePresence>
+            {open && (
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="
+                        absolute
+                        top-full
+                        right-0
+                        mt-2
+                        w-72
+                        bg-white
+                        border
+                        border-emerald-300
+                        rounded-lg
+                        shadow-xl
+                        z-[9999]
+                        max-h-80
+                        overflow-y-auto
+                    "
+                >
+                    {groups.map((group) => {
+                        const isActive = activeGroups.includes(group.id);
 
-                    if (
-                        preparationId
-                    ) {
-                        onAddPreparation(
-                            preparationId
+                        return (
+                            <button
+                                type="button"
+                                key={group.id}
+                                onClick={() => onSelect(group.id)}
+                                className="w-full text-left px-3 py-3 hover:bg-emerald-50 border-b border-emerald-200 last:border-b-0 transition-colors text-sm"
+                            >
+                                <div className="flex items-center justify-between">
+                                    <span className="font-semibold text-gray-900">
+                                        {group.title}
+                                    </span>
+
+                                    {isActive && (
+                                        <Check className="w-4 h-4 text-emerald-600" />
+                                    )}
+                                </div>
+                            </button>
                         );
-                    }
-                }}
-                className="appearance-none rounded-lg border border-emerald-300 bg-white px-4 py-2 pr-10 text-sm font-medium text-emerald-800 shadow-sm transition hover:border-emerald-500 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-200 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-                <option value="">
-                    + Add Preparation
-                </option>
-
-                {availablePreparations.map(
-                    (preparation) => (
-                        <option
-                            key={
-                                preparation.id
-                            }
-                            value={
-                                preparation.id
-                            }
-                        >
-                            {
-                                preparation.title
-                            }
-                        </option>
-                    )
-                )}
-            </select>
-
-            <Plus className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-700" />
-        </div>
+                    })}
+                </motion.div>
+            )}
+        </AnimatePresence>
     );
 };
 

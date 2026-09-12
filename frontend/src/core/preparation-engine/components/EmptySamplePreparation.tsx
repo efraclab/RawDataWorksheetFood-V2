@@ -1,5 +1,5 @@
 import React from "react";
-import { Beaker, Plus } from "lucide-react";
+import { motion } from "framer-motion";
 
 export interface EmptySamplePreparationProps {
     title?: string;
@@ -9,35 +9,59 @@ export interface EmptySamplePreparationProps {
 }
 
 const EmptySamplePreparation: React.FC<EmptySamplePreparationProps> = ({
-    title = "No Sample Preparation",
-    description = "Add a sample preparation to configure the required analysis steps.",
+    title = "No sample preparations added yet",
+    description = "Click the add button to create LOD sample preparation",
     isLocked = false,
-    onAddPreparation,
+    //onAddPreparation,
 }) => {
+    const Target: React.FC<{ className: string }> = ({ className }) => (
+        <svg
+            className={className}
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+        >
+            <circle cx="12" cy="12" r="10" />
+            <circle cx="12" cy="12" r="6" />
+            <circle cx="12" cy="12" r="2" />
+        </svg>
+    );
+
     return (
-        <div className="rounded-2xl border border-dashed border-emerald-300 bg-emerald-50/40 px-6 py-12 text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
-                <Beaker className="h-7 w-7 text-emerald-700" />
+        <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative overflow-hidden rounded-2xl border-2 border-dashed border-emerald-300 bg-gradient-to-br from-emerald-50 via-white to-emerald-50 py-12 text-center shadow-inner"
+        >
+            <div className="relative z-10">
+                <div className="mb-3 inline-block rounded-full bg-white p-4 shadow-lg">
+                    <Target className="h-10 w-10 text-emerald-400" />
+                </div>
+
+                <p className="mb-1 text-base font-bold text-emerald-800">
+                    {title}
+                </p>
+
+                <p className="mx-auto max-w-md text-xs text-emerald-600/80">
+                    {description}
+                </p>
+
+                <div className="mt-6 inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-100/50 px-4 py-2">
+                    <div
+                        className={`h-2 w-2 rounded-full bg-emerald-500 ${
+                            isLocked ? "" : "animate-ping"
+                        }`}
+                    />
+                    <span className="text-xs font-semibold text-emerald-800">
+                        Ready to start
+                    </span>
+                </div>
             </div>
-
-            <h3 className="mt-4 text-lg font-semibold text-emerald-900">
-                {title}
-            </h3>
-
-            <p className="mx-auto mt-2 max-w-md text-sm text-emerald-700">
-                {description}
-            </p>
-
-            <button
-                type="button"
-                onClick={onAddPreparation}
-                disabled={isLocked}
-                className="mt-5 inline-flex items-center gap-2 rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-                <Plus className="h-4 w-4" />
-                Add Preparation
-            </button>
-        </div>
+        </motion.div>
     );
 };
 

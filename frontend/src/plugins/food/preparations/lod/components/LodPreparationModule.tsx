@@ -4,6 +4,8 @@ import {
     useState,
 } from "react";
 
+import { BiTestTube } from "react-icons/bi";
+
 import type { PreparationModuleHandle } from "../../../../../core/preparation/ui/PreparationModuleHandle";
 import type { PreparationDraft } from "../../../../../core/preparation/ui/PreparationDraft";
 
@@ -107,8 +109,8 @@ const LodPreparationModule = forwardRef<
     (
         {
             parameterId,
-            parameterName,
-            parameterCode,
+            // parameterName,
+            // parameterCode,
             isLocked,
             onLockPreparation,
             onUnlockPreparation,
@@ -393,37 +395,54 @@ const LodPreparationModule = forwardRef<
         );
 
         return (
-            <div className="space-y-6">
-                <div>
-                    <h3 className="text-2xl font-bold text-emerald-900">
-                        {parameterName ||
-                            "Loss on Drying"}
-                    </h3>
+            <div
+                className="
+                    mt-8
+                    overflow-hidden
+                    rounded-3xl
+                    border
+                    border-emerald-200
+                    bg-gradient-to-br
+                    from-white
+                    via-emerald-50/30
+                    to-white
+                    shadow-2xl
+                "
+            >
+                <div className="bg-gradient-to-r from-white via-white to-emerald-50 px-6 py-5">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-700 to-emerald-900 shadow-lg">
+                                <BiTestTube className="h-5 w-5 text-white" />
+                            </div>
 
-                    {parameterCode && (
-                        <p className="mt-1 text-sm text-emerald-600">
-                            Parameter: {parameterCode}
-                        </p>
-                    )}
+                            <div>
+                                <h2 className="text-2xl font-bold text-emerald-900">
+                                    LOD Analysis
+                                </h2>
+
+                                <p className="text-sm text-emerald-600">
+                                    LOD • Sample &amp; Calculations
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="rounded-full bg-emerald-100 px-5 py-2 text-sm font-semibold text-emerald-700">
+                            {samplePreparations.length} Items
+                        </div>
+                    </div>
                 </div>
 
-                <SamplePreparationSection<
-                    SamplePreparationLod
-                >
-                    title="Sample Preparations"
+                <SamplePreparationSection<SamplePreparationLod>
+                    title="Sample Preparations for LOD"
                     preparations={samplePreparations}
                     isLocked={isLocked}
                     onAddPreparation={addPreparation}
-                    onRemovePreparation={
-                        (preparation, index) => {
-                            void preparation;
-                            removePreparation(index);
-                        }
-                    }
-                    renderPreparation={(
-                        preparation,
-                        index
-                    ) => (
+                    onRemovePreparation={(preparation, index) => {
+                        void preparation;
+                        removePreparation(index);
+                    }}
+                    renderPreparation={(preparation, index) => (
                         <SamplePreparationDetail<
                             SamplePreparationLod,
                             SamplePreparationLodStep
@@ -437,14 +456,8 @@ const LodPreparationModule = forwardRef<
                             onAddStep={() =>
                                 addStep(index)
                             }
-                            onRemoveStep={(
-                                _step,
-                                stepIndex
-                            ) =>
-                                removeStep(
-                                    index,
-                                    stepIndex
-                                )
+                            onRemoveStep={(_step, stepIndex) =>
+                                removeStep(index, stepIndex)
                             }
                             renderStep={(
                                 step,
@@ -459,22 +472,14 @@ const LodPreparationModule = forwardRef<
 
                                         <input
                                             type="text"
-                                            value={
-                                                step.value1 ??
-                                                ""
-                                            }
-                                            disabled={
-                                                locked
-                                            }
-                                            onChange={(
-                                                event
-                                            ) =>
+                                            value={step.value1 ?? ""}
+                                            disabled={locked}
+                                            onChange={(event) =>
                                                 updateStep(
                                                     index,
                                                     stepIndex,
                                                     "value1",
-                                                    event.target
-                                                        .value
+                                                    event.target.value
                                                 )
                                             }
                                             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 disabled:bg-gray-100"
@@ -488,22 +493,14 @@ const LodPreparationModule = forwardRef<
 
                                         <input
                                             type="text"
-                                            value={
-                                                step.unit1 ??
-                                                ""
-                                            }
-                                            disabled={
-                                                locked
-                                            }
-                                            onChange={(
-                                                event
-                                            ) =>
+                                            value={step.unit1 ?? ""}
+                                            disabled={locked}
+                                            onChange={(event) =>
                                                 updateStep(
                                                     index,
                                                     stepIndex,
                                                     "unit1",
-                                                    event.target
-                                                        .value
+                                                    event.target.value
                                                 )
                                             }
                                             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 disabled:bg-gray-100"
@@ -515,122 +512,114 @@ const LodPreparationModule = forwardRef<
                     )}
                 />
 
-                <FileAttachmentSection
-                    files={files
-                        .filter(
-                            (
-                                file
-                            ): file is {
-                                id: string | number;
-                                name: string;
-                                size?: number;
-                                type?: string;
-                                url?: string;
-                            } =>
-                                !!file &&
-                                typeof file === "object" &&
-                                "id" in file &&
-                                "name" in file
+                {samplePreparations.length > 0 && (
+                    <>
+                        <FileAttachmentSection
+                            files={files.filter(
+                                (file): file is {
+                                    id: string | number;
+                                    name: string;
+                                    size?: number;
+                                    type?: string;
+                                    url?: string;
+                                } =>
+                                    !!file &&
+                                    typeof file === "object" &&
+                                    "id" in file &&
+                                    "name" in file
+                            )}
+                            isLocked={isLocked}
+                            onAttachFiles={(selectedFiles) => {
+                                setFiles((current) => [
+                                    ...current,
+                                    ...selectedFiles.map(
+                                        (file, index) => ({
+                                            id: `${Date.now()}-${index}`,
+                                            name: file.name,
+                                            size: file.size,
+                                            type: file.type,
+                                        })
+                                    ),
+                                ]);
+                            }}
+                            onRemoveFile={(_, index) => {
+                                setFiles((current) =>
+                                    current.filter(
+                                        (_, currentIndex) =>
+                                            currentIndex !== index
+                                    )
+                                );
+                            }}
+                        />
+
+                        <PreparationCompleteSection
+                            preparationName="Loss on Drying"
+                            isCompleted={completed}
+                            isLocked={isLocked}
+                            completedBy={null}
+                            completedAt={completedAt}
+                            onComplete={completePreparation}
+                            onUnlock={unlockPreparation}
+                        />
+
+                        {completed && (
+                            <CalculationSection
+                                title="Loss on Drying Calculation"
+                                description="Calculate the Loss on Drying result using the recorded weights."
+                                isLocked={isLocked}
+                                hasCalculation={calculation !== null}
+                                onCalculate={calculate}
+                            >
+                                {calculation ? (
+                                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
+                                        <div className="grid gap-4 md:grid-cols-4">
+                                            <div>
+                                                <span className="text-xs text-emerald-600">
+                                                    W1
+                                                </span>
+                                                <p className="font-semibold text-emerald-900">
+                                                    {calculation.w1}
+                                                </p>
+                                            </div>
+
+                                            <div>
+                                                <span className="text-xs text-emerald-600">
+                                                    W2
+                                                </span>
+                                                <p className="font-semibold text-emerald-900">
+                                                    {calculation.w2}
+                                                </p>
+                                            </div>
+
+                                            <div>
+                                                <span className="text-xs text-emerald-600">
+                                                    W3
+                                                </span>
+                                                <p className="font-semibold text-emerald-900">
+                                                    {calculation.w3}
+                                                </p>
+                                            </div>
+
+                                            <div>
+                                                <span className="text-xs text-emerald-600">
+                                                    Result
+                                                </span>
+                                                <p className="text-xl font-bold text-emerald-900">
+                                                    {calculation.result}{" "}
+                                                    {calculation.unit}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <EmptyCalculation />
+                                )}
+                            </CalculationSection>
                         )}
-                    isLocked={isLocked}
-                    onAttachFiles={(selectedFiles) => {
-                        setFiles((current) => [
-                            ...current,
-                            ...selectedFiles.map(
-                                (file, index) => ({
-                                    id: `${Date.now()}-${index}`,
-                                    name: file.name,
-                                    size: file.size,
-                                    type: file.type,
-                                })
-                            ),
-                        ]);
-                    }}
-                    onRemoveFile={(_, index) => {
-                        setFiles((current) =>
-                            current.filter(
-                                (_, currentIndex) =>
-                                    currentIndex !==
-                                    index
-                            )
-                        );
-                    }}
-                />
-
-                <CalculationSection
-                    title="Loss on Drying Calculation"
-                    description="Calculate the Loss on Drying result using the recorded weights."
-                    isLocked={isLocked}
-                    hasCalculation={
-                        calculation !== null
-                    }
-                    onCalculate={calculate}
-                >
-                    {calculation ? (
-                        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
-                            <div className="grid gap-4 md:grid-cols-4">
-                                <div>
-                                    <span className="text-xs text-emerald-600">
-                                        W1
-                                    </span>
-
-                                    <p className="font-semibold text-emerald-900">
-                                        {calculation.w1}
-                                    </p>
-                                </div>
-
-                                <div>
-                                    <span className="text-xs text-emerald-600">
-                                        W2
-                                    </span>
-
-                                    <p className="font-semibold text-emerald-900">
-                                        {calculation.w2}
-                                    </p>
-                                </div>
-
-                                <div>
-                                    <span className="text-xs text-emerald-600">
-                                        W3
-                                    </span>
-
-                                    <p className="font-semibold text-emerald-900">
-                                        {calculation.w3}
-                                    </p>
-                                </div>
-
-                                <div>
-                                    <span className="text-xs text-emerald-600">
-                                        Result
-                                    </span>
-
-                                    <p className="text-xl font-bold text-emerald-900">
-                                        {calculation.result}{" "}
-                                        {calculation.unit}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    ) : (
-                        <EmptyCalculation />
-                    )}
-                </CalculationSection>
-
-                <PreparationCompleteSection
-                    preparationName="Loss on Drying"
-                    isCompleted={completed}
-                    isLocked={isLocked}
-                    completedBy={null}
-                    completedAt={completedAt}
-                    onComplete={
-                        completePreparation
-                    }
-                    onUnlock={
-                        unlockPreparation
-                    }
-                />
+                    </>
+                )}
             </div>
-        );
+        )
     }
 );
 

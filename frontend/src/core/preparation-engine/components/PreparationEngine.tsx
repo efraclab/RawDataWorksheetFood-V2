@@ -7,6 +7,7 @@ import  {
 } from "react";
 
 import PreparationHeader from "./PreparationHeader";
+import PreparationDropdown from "./PreparationDropdown";
 import ActivePreparationGroups from "./ActivePreparationGroups";
 import ModuleRenderer from "./ModuleRenderer";
 
@@ -380,270 +381,90 @@ const PreparationEngine = forwardRef<
          * ============================================================
          */
         return (
-            <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm ">
-
-                {/* ==================================================
-                    HEADER
-                ================================================== */}
-                <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-
+            <div
+                className="
+                    mb-8
+                    p-6
+                    bg-gradient-to-br
+                    from-emerald-50
+                    via-emerald-50
+                    to-emerald-50
+                    border
+                    border-emerald-200
+                    rounded-2xl
+                    shadow-2xl
+                "
+            >
+                <div
+                    className="
+                        flex
+                        items-center
+                        justify-between
+                        mb-6
+                    "
+                >
                     <PreparationHeader />
 
                     <div className="relative">
                         <button
                             type="button"
-                            disabled={
-                                effectiveIsLocked
-                            }
+                            disabled={effectiveIsLocked}
                             onClick={() => {
-                                if (effectiveIsLocked) {
-                                    return;
-                                }
-
-                                setShowMenu((current) => !current);
+                                if (effectiveIsLocked) return;
+                                setShowMenu((value) => !value);
                             }}
                             className="
-                                inline-flex
-                                items-center
-                                gap-2
-                                rounded-xl
+                                disabled:opacity-50
+                                disabled:cursor-not-allowed
+                                px-6
+                                py-3
                                 bg-emerald-600
-                                px-5
-                                py-2.5
-                                text-sm
-                                font-semibold
+                                hover:bg-emerald-700
                                 text-white
+                                rounded-xl
+                                font-semibold
                                 shadow-lg
                                 transition-all
                                 duration-200
-                                hover:bg-emerald-700
-                                disabled:cursor-not-allowed
-                                disabled:opacity-50
                             "
                         >
-                            <span>+ Add Preparation</span>
-
-                            <svg
-                                className={`h-4 w-4 transition-transform duration-200 ${
-                                    showMenu ? "rotate-180" : ""
-                                }`}
-                                viewBox="0 0 20 20"
-                                fill="currentColor"
-                                aria-hidden="true"
-                            >
-                                <path
-                                    fillRule="evenodd"
-                                    d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
-                                    clipRule="evenodd"
-                                />
-                            </svg>
+                            + Add Preparation
                         </button>
 
-                        {showMenu && !effectiveIsLocked && (
-                            <div
-                                className="
-                                    absolute
-                                    right-0
-                                    top-full
-                                    z-50
-                                    mt-2
-                                    w-72
-                                    overflow-hidden
-                                    rounded-xl
-                                    border
-                                    border-emerald-200
-                                    bg-white
-                                    shadow-2xl
-                                "
-                            >
-                                <div className="max-h-80 overflow-y-auto">
-                                    {registry
-                                        .filter(
-                                            (definition) =>
-                                                !activeGroups.includes(
-                                                    definition.id
-                                                )
-                                        )
-                                        .map((definition) => (
-                                            <button
-                                                key={definition.id}
-                                                type="button"
-                                                onClick={() => {
-                                                    addPreparation(
-                                                        definition.id
-                                                    );
-                                                    setShowMenu(false);
-                                                }}
-                                                className="
-                                                    block
-                                                    w-full
-                                                    border-b
-                                                    border-emerald-100
-                                                    px-4
-                                                    py-3
-                                                    text-left
-                                                    text-sm
-                                                    font-medium
-                                                    text-gray-800
-                                                    transition-colors
-                                                    duration-150
-                                                    last:border-b-0
-                                                    hover:bg-emerald-50
-                                                "
-                                            >
-                                                {definition.title}
-                                            </button>
-                                        ))}
-
-                                    {registry.filter(
-                                        (definition) =>
-                                            !activeGroups.includes(
-                                                definition.id
-                                            )
-                                    ).length === 0 && (
-                                        <div className="px-4 py-5 text-center text-sm text-gray-500">
-                                            No preparations available
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
+                        <PreparationDropdown
+                            open={showMenu}
+                            groups={registry}
+                            activeGroups={activeGroups}
+                            onSelect={(groupId) => {
+                                addPreparation(groupId);
+                                setShowMenu(false);
+                            }}
+                        />
                     </div>
                 </div>
 
-                {/* ==================================================
-                    ACTIVE PREPARATION GROUPS
-                ================================================== */}
-                {activeGroups.length === 0 ? (
-                    <div
-                        className="
-                            min-h-[230px]
-                            rounded-2xl
-                            border-2
-                            border-dashed
-                            border-gray-300
-                            bg-white
-                            px-6
-                            py-10
-                            flex
-                            flex-col
-                            items-center
-                            justify-center
-                            text-center
-                        "
-                    >
-                        <div
-                            className="
-                                mb-5
-                                flex
-                                h-14
-                                w-14
-                                items-center
-                                justify-center
-                                rounded-full
-                                bg-gray-100
-                                text-gray-300
-                            "
-                            aria-hidden="true"
-                        >
-                            <svg
-                                className="h-9 w-9"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                            >
-                                <circle cx="12" cy="12" r="8" />
-                                <circle cx="12" cy="12" r="4" />
-                                <circle cx="12" cy="12" r="1.5" />
-                            </svg>
-                        </div>
+                <ActivePreparationGroups
+                    registry={registry}
+                    activeGroups={activeGroups}
+                    onRemovePreparation={removePreparation}
+                    onTogglePreparation={togglePreparation}
+                    expandedGroups={expandedGroups}
+                    isLocked={effectiveIsLocked}
+                />
 
-                        <h3
-                            className="
-                                text-base
-                                font-bold
-                                text-gray-900
-                            "
-                        >
-                            No preparation groups configured yet
-                        </h3>
-
-                        <p
-                            className="
-                                mt-2
-                                max-w-xl
-                                text-sm
-                                leading-6
-                                text-gray-500
-                            "
-                        >
-                            Click the{" "}
-                            <span className="font-semibold text-emerald-700">
-                                "Add Preparation"
-                            </span>{" "}
-                            button above to select preparation groups
-                            <br />
-                            for this parameter
-                        </p>
-                    </div>
-                ) : (
-                    <ActivePreparationGroups
-                        registry={registry}
-                        activeGroups={
-                            activeGroups
-                        }
-                        onRemovePreparation={
-                            removePreparation
-                        }
-                        onTogglePreparation={
-                            togglePreparation
-                        }
-                        expandedGroups={
-                            expandedGroups
-                        }
-                        isLocked={
-                            effectiveIsLocked
-                        }
-                    />
-                )}
-
-                {/* ==================================================
-                    MODULE CONTENT
-                ================================================== */}
                 <ModuleRenderer
                     registry={registry}
-                    activeGroups={
-                        expandedGroups
-                    }
-                    parameterId={
-                        parameterId
-                    }
-                    parameterName={
-                        parameterName
-                    }
-                    parameterCode={
-                        parameterCode
-                    }
+                    activeGroups={expandedGroups}
+                    parameterId={parameterId}
+                    parameterName={parameterName}
+                    parameterCode={parameterCode}
                     role={role}
-                    isLocked={
-                        effectiveIsLocked
-                    }
-                    canUnlockPreparation={
-                        canUnlockPreparation
-                    }
-                    canEditCalculations={
-                        canEditCalculations
-                    }
-                    onLockPreparation={
-                        onLockPreparation
-                    }
-                    onUnlockPreparation={
-                        onUnlockPreparation
-                    }
-                    moduleRefs={
-                        moduleRefs
-                    }
+                    isLocked={effectiveIsLocked}
+                    canUnlockPreparation={canUnlockPreparation}
+                    canEditCalculations={canEditCalculations}
+                    onLockPreparation={onLockPreparation}
+                    onUnlockPreparation={onUnlockPreparation}
+                    moduleRefs={moduleRefs}
                 />
             </div>
         );
