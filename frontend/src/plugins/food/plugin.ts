@@ -1,12 +1,10 @@
 import type { LabPlugin } from "../../core/plugin";
 
 import {
-    foodPreparationRegistry
+    foodPreparationRegistry,
 } from "./preparation-engine/foodPreparationRegistry";
 
-
 const foodPlugin: LabPlugin = {
-
     id: "food",
 
     name: "Food",
@@ -14,9 +12,7 @@ const foodPlugin: LabPlugin = {
     description:
         "Food laboratory worksheet, preparation, analysis and approval functionality.",
 
-    preparations:
-        foodPreparationRegistry,
+    preparations: foodPreparationRegistry,
 };
-
 
 export default foodPlugin;

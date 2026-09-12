@@ -36,6 +36,8 @@ import type { BufferPreparation } from "../../../plugins/food/models/BufferPrepa
 import type { MobilePhasePreparation } from "../../../plugins/food/models/MobilePhasePreparation";
 import type { DiluentPreparation } from "../../../plugins/food/models/DiluentPreparation";
 import CopyFromWorksheetDialog from "../../../plugins/food/components/worksheet/Copyfromworksheetdialog";
+import PreparationEngine from "../../preparation-engine/components/PreparationEngine";
+import { foodPreparationModuleRegistry } from "../../../plugins/food/preparation-engine/foodPreparationModuleRegistry";
 
 interface WorksheetDetailsProps {
   worksheetId: string;
@@ -812,16 +814,44 @@ setAddedParameters(restoredParameters);
       .replace(/[_-]+/g, " ")
       .replace(/\s+/g, " ");
 
+  const normalizedRole = normalizeSectionStatus(
+    localStorage.getItem("Role") ?? ""
+  );
+
+  const selectedParameterStatus = normalizeSectionStatus(
+    selectedParameter?.status ?? "created"
+  );
+
+  const isAnalystRevisionStarted =
+    normalizedRole === "analyst" &&
+    selectedParameterStatus === "analysis revision started";
+
   const isPreparationLocked = Boolean(
     selectedParameter &&
+      !isAnalystRevisionStarted &&
       [
         "analysis pending",
         "analysis completed",
         "analysis revision",
         "analysis revision started",
         "approved",
-      ].includes(normalizeSectionStatus(selectedParameter.status))
+      ].includes(selectedParameterStatus)
   );
+
+  const canUnlockPreparation =
+    (normalizedRole === "reviewer" &&
+      selectedParameterStatus === "created") ||
+    (normalizedRole === "analyst" &&
+      isAnalystRevisionStarted);
+
+  const canEditCalculations =
+    (normalizedRole === "reviewer" &&
+      selectedParameterStatus === "created") ||
+    (normalizedRole === "analyst" &&
+      (
+        selectedParameterStatus === "analysis started" ||
+        isAnalystRevisionStarted
+      ));
 
   const handleAddParameter = (parameter: SampleData) => {
     // V1 rule: never add the same parameter twice.
@@ -1342,10 +1372,6 @@ setAddedParameters(restoredParameters);
 
   const normalizedWorksheetStatus =
     normalizeStatus(worksheetStatus);
-
-  const normalizedRole = normalizeStatus(
-    localStorage.getItem("Role") ?? ""
-  );
 
   const areAllParametersApproved =
     addedParameters.length > 0 &&
@@ -2082,6 +2108,23 @@ setAddedParameters(restoredParameters);
                     data
                   )
                 }
+              />
+
+              <PreparationEngine
+                registry={foodPreparationModuleRegistry}
+                parameterId={selectedParameter.id}
+                parameterName={selectedParameter.parameterName}
+                parameterCode={selectedParameter.paraCode}
+                role={localStorage.getItem("Role") ?? ""}
+                isLocked={isPreparationLocked}
+                canUnlockPreparation={canUnlockPreparation}
+                canEditCalculations={canEditCalculations}
+                onLockPreparation={(parameterId) => {
+                  if (parameterId !== selectedParameter.id) return;
+                }}
+                onUnlockPreparation={(parameterId) => {
+                  if (parameterId !== selectedParameter.id) return;
+                }}
               />
             </>
           )}

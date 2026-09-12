@@ -1,31 +1,35 @@
 import React from "react";
-import { Beaker } from "lucide-react";
+import { BiTestTube } from "react-icons/bi";
 
-export interface PreparationHeaderProps {
-    title?: string;
-    description?: string;
-}
-
-const PreparationHeader: React.FC<PreparationHeaderProps> = ({
-    title = "Preparation Management",
-    description = "Configure analysis preparations for this parameter",
-}) => {
+const PreparationHeader: React.FC = () => {
     return (
-        <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-emerald-700 to-slate-900 flex items-center justify-center shadow-lg">
-                    <Beaker className="w-6 h-6 text-white" />
-                </div>
+        <div className="flex items-center gap-4 ">
+            <div
+                className="
+                    w-12
+                    h-12
+                    bg-gradient-to-br
+                    from-emerald-700
+                    to-emerald-900
+                    rounded-2xl
+                    flex
+                    items-center
+                    justify-center
+                    shadow-lg
+                    
+                "
+            >
+                <BiTestTube className="w-6 h-6 text-white" />
+            </div>
 
-                <div>
-                    <h2 className="text-3xl font-bold text-emerald-900">
-                        {title}
-                    </h2>
+            <div >
+                <h3 className="text-xl font-bold text-emerald-900 tracking-tight">
+                    Preparation Management
+                </h3>
 
-                    <p className="text-emerald-600">
-                        {description}
-                    </p>
-                </div>
+                <p className="text-xs text-emerald-600 font-medium">
+                    Configure analysis preparations for this parameter
+                </p>
             </div>
         </div>
     );

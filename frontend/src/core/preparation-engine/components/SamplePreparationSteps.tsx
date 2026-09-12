@@ -4,7 +4,6 @@ import { Plus } from "lucide-react";
 export interface PreparationStep {
     readonly id?: string | number;
     readonly name: string;
-    readonly [key: string]: unknown;
 }
 
 export interface SamplePreparationStepsProps<TStep extends PreparationStep> {
@@ -21,7 +20,9 @@ export interface SamplePreparationStepsProps<TStep extends PreparationStep> {
     ) => React.ReactNode;
 }
 
-const SamplePreparationSteps = <TStep extends PreparationStep>({
+const SamplePreparationSteps = <
+    TStep extends PreparationStep
+>({
     steps,
     isLocked = false,
     onAddStep,
@@ -105,7 +106,11 @@ const SamplePreparationSteps = <TStep extends PreparationStep>({
                                 )}
                             </div>
 
-                            {renderStep(step, index, isLocked)}
+                            {renderStep(
+                                step,
+                                index,
+                                isLocked
+                            )}
                         </div>
                     ))}
                 </div>

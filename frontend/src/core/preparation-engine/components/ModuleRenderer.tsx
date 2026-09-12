@@ -1,10 +1,16 @@
 import React from "react";
 
-import type { PreparationModuleDefinition } from "../../preparation/ui/PreparationModuleDefinition";
-import type { PreparationModuleHandle } from "../../preparation/ui/PreparationModuleHandle";
+import type {
+    PreparationModuleDefinition,
+} from "../../preparation/ui/PreparationModuleDefinition";
+
+import type {
+    PreparationModuleHandle,
+} from "../../preparation/ui/PreparationModuleHandle";
 
 export interface ModuleRendererProps {
-    registry: readonly PreparationModuleDefinition[];
+    registry:
+        readonly PreparationModuleDefinition[];
 
     activeGroups: string[];
 
@@ -18,16 +24,29 @@ export interface ModuleRendererProps {
 
     isLocked: boolean;
 
-    onLockPreparation: (parameterId: number) => void;
+    canUnlockPreparation: boolean;
 
-    onUnlockPreparation: (parameterId: number) => void;
+    canEditCalculations: boolean;
+
+    onLockPreparation: (
+        parameterId: number
+    ) => void;
+
+    onUnlockPreparation: (
+        parameterId: number
+    ) => void;
 
     moduleRefs: React.MutableRefObject<
-        Record<string, PreparationModuleHandle | null>
+        Record<
+            string,
+            PreparationModuleHandle | null
+        >
     >;
 }
 
-const ModuleRenderer: React.FC<ModuleRendererProps> = ({
+const ModuleRenderer: React.FC<
+    ModuleRendererProps
+> = ({
     registry,
     activeGroups,
     parameterId,
@@ -35,46 +54,74 @@ const ModuleRenderer: React.FC<ModuleRendererProps> = ({
     parameterCode,
     role,
     isLocked,
+    canUnlockPreparation,
+    canEditCalculations,
     onLockPreparation,
     onUnlockPreparation,
     moduleRefs,
 }) => {
     return (
         <div className="space-y-4">
-            {activeGroups.map((groupId) => {
-                const definition = registry.find(
-                    (module) => module.id === groupId
-                );
+            {activeGroups.map(
+                (groupId) => {
+                    const definition =
+                        registry.find(
+                            (module) =>
+                                module.id ===
+                                groupId
+                        );
 
-                if (!definition) {
-                    return null;
+                    if (!definition) {
+                        return null;
+                    }
+
+                    const ModuleComponent =
+                        definition.component;
+
+                    return (
+                        <ModuleComponent
+                            key={groupId}
+                            ref={(
+                                instance:
+                                    PreparationModuleHandle | null
+                            ) => {
+                                moduleRefs.current[
+                                    groupId
+                                ] =
+                                    instance;
+                            }}
+                            preparationId={
+                                groupId
+                            }
+                            parameterId={
+                                parameterId
+                            }
+                            parameterName={
+                                parameterName
+                            }
+                            parameterCode={
+                                parameterCode
+                            }
+                            role={role}
+                            isLocked={
+                                isLocked
+                            }
+                            canUnlockPreparation={
+                                canUnlockPreparation
+                            }
+                            canEditCalculations={
+                                canEditCalculations
+                            }
+                            onLockPreparation={
+                                onLockPreparation
+                            }
+                            onUnlockPreparation={
+                                onUnlockPreparation
+                            }
+                        />
+                    );
                 }
-
-                const ModuleComponent =
-                    definition.component;
-
-                return (
-                    <ModuleComponent
-                        key={groupId}
-                        ref={(instance: PreparationModuleHandle | null) => {
-                            moduleRefs.current[groupId] =
-                                instance;
-                        }}
-                        preparationId={groupId}
-                        parameterId={parameterId}
-                        parameterName={parameterName}
-                        parameterCode={parameterCode}
-                        role={role}
-                        isLocked={isLocked}
-                        onLockPreparation={
-                            onLockPreparation
-                        }
-                        onUnlockPreparation={
-                            onUnlockPreparation
-                        }
-                    />
-                );
-            })}
+            )}
         </div>
     );
 };

@@ -22,7 +22,10 @@ export interface SamplePreparationDetailProps<
     onCopy?: () => void;
 
     onAddStep?: () => void;
-    onRemoveStep?: (step: TStep, index: number) => void;
+    onRemoveStep?: (
+        step: TStep,
+        index: number
+    ) => void;
 
     renderStep: (
         step: TStep,
@@ -48,12 +51,18 @@ const SamplePreparationDetail = <
     onAddStep,
     onRemoveStep,
     renderStep,
-}: SamplePreparationDetailProps<TPreparation, TStep>) => {
-    const [expanded, setExpanded] = useState(true);
+}: SamplePreparationDetailProps<
+    TPreparation,
+    TStep
+>) => {
+    const [expanded, setExpanded] =
+        useState(true);
 
     const title =
         preparation.label?.trim() ||
-        `Sample Preparation ${preparationIndex + 1}`;
+        `Sample Preparation ${
+            preparationIndex + 1
+        }`;
 
     const handleToggle = () => {
         setExpanded((current) => !current);
@@ -70,7 +79,9 @@ const SamplePreparationDetail = <
             onRemove={onRemove}
             onCopy={onCopy}
         >
-            <SamplePreparationSteps
+            <SamplePreparationSteps<
+                TStep
+            >
                 steps={preparation.steps}
                 isLocked={isLocked}
                 onAddStep={onAddStep}
