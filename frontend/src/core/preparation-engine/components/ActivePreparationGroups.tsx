@@ -75,7 +75,7 @@ const ActivePreparationGroups: React.FC<ActivePreparationGroupsProps> = ({
                                         }}
                                         whileHover={isLocked ? undefined : { scale: 1.2, rotate: 90 }}
                                         whileTap={isLocked ? undefined : { scale: 0.9 }}
-                                        className={`relative z-10 w-5 h-5 flex items-center justify-center rounded-full text-white transition-all font-bold border border-white/50 shadow-sm ${
+                                        className={`relative z-10 flex h-5 w-5 items-center justify-center rounded-full border border-white/50 text-white transition-all font-bold shadow-sm ${
                                             isLocked
                                                 ? "bg-emerald-800/40 cursor-not-allowed opacity-60"
                                                 : "bg-emerald-800 hover:bg-red-500 hover:border-red-600"

@@ -23,7 +23,7 @@ const PreparationCompleteModal: React.FC<PreparationCompleteModalProps> = ({
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]" role="dialog" aria-modal="true">
-            <div className="w-full max-w-[515px] overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="w-full max-w-[515px] overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-2xl">
                 <div className="relative bg-gradient-to-r from-emerald-800 via-emerald-700 to-slate-800 px-6 py-5 text-white">
                     <div className="flex items-center gap-3">
                         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">

@@ -36,7 +36,7 @@ import type { BufferPreparation } from "../../../plugins/food/models/BufferPrepa
 import type { MobilePhasePreparation } from "../../../plugins/food/models/MobilePhasePreparation";
 import type { DiluentPreparation } from "../../../plugins/food/models/DiluentPreparation";
 import CopyFromWorksheetDialog from "../../../plugins/food/components/worksheet/Copyfromworksheetdialog";
-import PreparationEngine from "../../preparation-engine/components/PreparationEngine";
+import PreparationEngine, { type PreparationEngineHandle } from "../../preparation-engine/components/PreparationEngine";
 import { foodPreparationModuleRegistry } from "../../../plugins/food/preparation-engine/foodPreparationModuleRegistry";
 
 interface WorksheetDetailsProps {
@@ -71,10 +71,15 @@ export default function WorksheetDetails({
   const [expandedParameterId, setExpandedParameterId] =
     useState<number | null>(null);
 
+  const [preparationLockedPerParam, setPreparationLockedPerParam] =
+    useState<Record<number, boolean>>({});
+
   const [availableParameters, setAvailableParameters] =
     useState<SampleData[]>([]);
 
   const [showCopyWorksheetDialog, setShowCopyWorksheetDialog] = useState(false);
+
+  const preparationEngineRef = useRef<PreparationEngineHandle | null>(null);
 
   // ============================================================
   // V1 ANALYST ASSIGNMENT WORKFLOW
@@ -826,7 +831,7 @@ setAddedParameters(restoredParameters);
     normalizedRole === "analyst" &&
     selectedParameterStatus === "analysis revision started";
 
-  const isPreparationLocked = Boolean(
+  const workflowPreparationLocked = Boolean(
     selectedParameter &&
       !isAnalystRevisionStarted &&
       [
@@ -836,6 +841,11 @@ setAddedParameters(restoredParameters);
         "analysis revision started",
         "approved",
       ].includes(selectedParameterStatus)
+  );
+
+  const isPreparationLocked = Boolean(
+    workflowPreparationLocked ||
+    (selectedParameter && preparationLockedPerParam[selectedParameter.id])
   );
 
   const canUnlockPreparation =
@@ -1323,11 +1333,79 @@ setAddedParameters(restoredParameters);
    *
    * No fake API call is performed here.
    */
-  const handleSaveDraft = () => {
-    console.log(
-      "Save Draft requested:",
-      displayWorksheetId
-    );
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [draftTast, setDraftToast] = useState<string | null>(null);
+
+  const handleSaveDraft = async () => {
+    if (!worksheet || !displayWorksheetId || isSavingDraft) return;
+    setIsSavingDraft(true);
+    setDraftToast(null);
+    try {
+      const currentParameter = expandedParameterId === null
+        ? null
+        : addedParameters.find(p => p.id === expandedParameterId) ?? null;
+
+      let parameters = [...addedParameters] as any[];
+      if (currentParameter && preparationEngineRef.current) {
+        const preparationDraft = preparationEngineRef.current.collectDraft();
+        const modules = preparationDraft.modules as Record<string, any>;
+        const lod = modules["food.lod"] ?? modules["lod"];
+        if (lod) {
+          const mappedPreparations = (lod.samplePreparations ?? []).map((sample: any) => ({
+            label: sample.label,
+            preparationCategory: "sample",
+            preparationType: "lod",
+            assignedStandardId: null,
+            steps: JSON.stringify(sample.steps ?? []),
+            content: null,
+            isPreparationCompleted: Boolean(lod.completed),
+            completedAt: lod.completedAt ?? null,
+          }));
+          const mappedFiles = (lod.files ?? []).map((file: any, i: number) => ({
+            id: typeof file.id === "number" ? file.id : i,
+            preparationType: "lod",
+            label: "Preparation Files",
+            fileName: file.name ?? file.fileName ?? "",
+            fileDataBase64: file.fileDataBase64 ?? null,
+          }));
+          const mappedCalculations = (lod.calculations ?? []).map((calc: any) => ({
+            label: calc.label,
+            calculationType: "lod",
+            data: calc,
+          }));
+          parameters = parameters.map(p => p.id === currentParameter.id
+            ? { ...p, preparations: mappedPreparations, calculations: mappedCalculations, files: mappedFiles, preparationCompletedAt: lod.completedAt ?? null }
+            : p);
+        }
+      }
+
+      const payload = {
+        role: localStorage.getItem("Role") ?? "",
+        worksheetId: displayWorksheetId,
+        registrationInfo: {
+          registrationNo: worksheet.sample?.registrationNo ?? "",
+          sampleName: worksheet.sample?.sampleName ?? "",
+          sampleCode: worksheet.sample?.sampleCode ?? "",
+          numberOfParameters: parameters.length,
+          lab: worksheet.sample?.lab ?? displayLab,
+        },
+        documentInfo: { status: worksheet.sample?.status ?? "Draft" },
+        parameters,
+      };
+
+      const response = await worksheetService.update(displayWorksheetId, payload);
+      if (response === undefined || response === null) throw new Error("Worksheet draft could not be saved.");
+      setDraftToast(`Draft saved successfully: ${displayWorksheetId}`);
+      window.setTimeout(() => setDraftToast(null), 3000);
+      const refreshed = await worksheetService.getById(displayWorksheetId, { employeeId: localStorage.getItem("EmployeeId") ?? "", role: localStorage.getItem("Role") ?? "" });
+      if (refreshed) setWorksheet(refreshed);
+    } catch (error: any) {
+      console.error("Save draft error:", error);
+      setDraftToast(error?.message ?? "Failed to save worksheet.");
+      window.setTimeout(() => setDraftToast(null), 4000);
+    } finally {
+      setIsSavingDraft(false);
+    }
   };
 
   // ============================================================
@@ -1437,7 +1515,7 @@ setAddedParameters(restoredParameters);
   // implemented now.
   // ============================================================
 
-  const [isSaving] = useState(false);
+  const isSaving = isSavingDraft;
   const [saveSuccess] = useState(false);
   const [isSubmitting] = useState(false);
   const [isSubmittingForQA] = useState(false);
@@ -2111,6 +2189,7 @@ setAddedParameters(restoredParameters);
               />
 
               <PreparationEngine
+                key={selectedParameter.id}
                 registry={foodPreparationModuleRegistry}
                 parameterId={selectedParameter.id}
                 parameterName={selectedParameter.parameterName}
@@ -2119,11 +2198,15 @@ setAddedParameters(restoredParameters);
                 isLocked={isPreparationLocked}
                 canUnlockPreparation={canUnlockPreparation}
                 canEditCalculations={canEditCalculations}
+                worksheet={selectedParameter}
+                ref={preparationEngineRef}
                 onLockPreparation={(parameterId) => {
                   if (parameterId !== selectedParameter.id) return;
+                  setPreparationLockedPerParam(prev => ({ ...prev, [parameterId]: true }));
                 }}
                 onUnlockPreparation={(parameterId) => {
                   if (parameterId !== selectedParameter.id) return;
+                  setPreparationLockedPerParam(prev => ({ ...prev, [parameterId]: false }));
                 }}
               />
             </>

@@ -321,15 +321,15 @@ const SystemSuitabilityDetail: React.FC<SystemSuitabilityDetailProps> = ({
                   })}
 
                   {/* Add Another Step Button */}
-                  <motion.button
-                    onClick={() => setShowAddStepDialog(true)}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-dashed border-emerald-300 rounded-xl hover:border-emerald-400 hover:bg-emerald-50 transition-all duration-200 text-white font-medium text-sm"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Add Another Step
-                  </motion.button>
+                 <motion.button
+  onClick={() => setShowAddStepDialog(true)}
+  whileHover={{ scale: 1.02 }}
+  whileTap={{ scale: 0.98 }}
+  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 border-2 border-emerald-600 rounded-xl hover:bg-emerald-700 hover:border-emerald-700 transition-all duration-200 text-white font-medium text-sm"
+>
+  <Plus className="w-4 h-4" />
+  Add Another Step
+</motion.button>
                 </div>
               </motion.div>
             )}

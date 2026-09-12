@@ -226,6 +226,27 @@ export const worksheetService = {
     }
   },
 
+  /** V1-compatible worksheet update used by Save Draft. */
+  async update(
+    worksheetId: string,
+    data: unknown
+  ): Promise<any> {
+    if (!worksheetId) throw new Error("Worksheet ID is required.");
+    try {
+      const response = await apiClient.post(
+        `/worksheets/update/${worksheetId}`,
+        data
+      );
+      return response.data;
+    } catch (error: any) {
+      throw new Error(
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        `Failed to save worksheet: ${error?.message ?? "Unknown error"}`
+      );
+    }
+  },
+
   async delete(
     worksheetId: string
   ): Promise<void> {

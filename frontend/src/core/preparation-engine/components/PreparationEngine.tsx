@@ -64,6 +64,9 @@ export interface PreparationEngineProps {
     onUnlockPreparation: (
         parameterId: number
     ) => void;
+
+    /** Worksheet/parameter data used to restore module state. */
+    worksheet?: unknown;
 }
 
 const PreparationEngine = forwardRef<
@@ -82,6 +85,7 @@ const PreparationEngine = forwardRef<
             canEditCalculations = false,
             onLockPreparation,
             onUnlockPreparation,
+            worksheet,
         },
         ref
     ) => {
@@ -90,6 +94,22 @@ const PreparationEngine = forwardRef<
 
         const [expandedGroups, setExpandedGroups] =
             useState<string[]>([]);
+
+        useEffect(() => {
+            if (!worksheet || activeGroups.length > 0) return;
+            const parameter = worksheet as any;
+            const hasLod = Array.isArray(parameter?.preparations) &&
+                parameter.preparations.some((x: any) =>
+                    String(x?.preparationType ?? "").toLowerCase() === "lod" &&
+                    x?.preparationCategory === "sample"
+                );
+            const hasLodCalculation = Array.isArray(parameter?.calculations) &&
+                parameter.calculations.some((x: any) => String(x?.calculationType ?? "").toLowerCase() === "lod");
+            if (hasLod || hasLodCalculation) {
+                setActiveGroups(["food.lod"]);
+                setExpandedGroups(["food.lod"]);
+            }
+        }, [worksheet, activeGroups.length]);
 
         const [showMenu, setShowMenu] =
             useState(false);
@@ -130,8 +150,11 @@ const PreparationEngine = forwardRef<
          * Analyst + Analysis Revision Started
          *      => editable
          */
-        const effectiveIsLocked =
-            isLocked && !canUnlockPreparation;
+        // A completed preparation is genuinely locked for editing.
+        // `canUnlockPreparation` only controls the separate Unlock action;
+        // it must NOT re-enable Add/Remove/Lock controls while the
+        // preparation is completed.
+        const effectiveIsLocked = isLocked;
 
         useEffect(() => {
             if (effectiveIsLocked) {
@@ -303,6 +326,27 @@ const PreparationEngine = forwardRef<
 
             pendingDraftRef.current = null;
         }, [activeGroups]);
+
+        useEffect(() => {
+            if (worksheet === undefined) return;
+            let cancelled = false;
+            const restore = async () => {
+                // Wait until active module refs exist.
+                for (const groupId of activeGroups) {
+                    const module = moduleRefs.current[groupId];
+                    if (!module) return;
+                }
+                for (const groupId of activeGroups) {
+                    if (cancelled) return;
+                    const module = moduleRefs.current[groupId];
+                    if (module?.restoreFromWorksheet) {
+                        await module.restoreFromWorksheet(worksheet);
+                    }
+                }
+            };
+            void restore();
+            return () => { cancelled = true; };
+        }, [activeGroups, worksheet]);
 
         /**
          * ============================================================
