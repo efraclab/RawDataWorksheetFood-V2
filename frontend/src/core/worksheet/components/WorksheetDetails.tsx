@@ -45,6 +45,7 @@ import CompleteAnalysisDialog from "../../../plugins/food/components/dialogs/Com
 import ApproveWorksheetDialog from "../../../plugins/food/components/dialogs/ApproveWorksheetDialog";
 import PreparationEngine, { type PreparationEngineHandle } from "../../preparation-engine/components/PreparationEngine";
 import { foodPreparationModuleRegistry } from "../../../plugins/food/preparation-engine/foodPreparationModuleRegistry";
+import FoodPrintReport from "../../../plugins/food/reporting/FoodPrintReport";
 
 interface WorksheetDetailsProps {
   worksheetId: string;
@@ -170,6 +171,7 @@ export default function WorksheetDetails({
     useState<SampleData[]>([]);
 
   const [showCopyWorksheetDialog, setShowCopyWorksheetDialog] = useState(false);
+  const [showFoodPrintReport, setShowFoodPrintReport] = useState(false);
 
   const preparationEngineRef = useRef<PreparationEngineHandle | null>(null);
 
@@ -2197,9 +2199,7 @@ export default function WorksheetDetails({
 
   const handlePrintReport = () => {
     if (normalizedWorksheetStatus !== "approved") return;
-    const printHandler = (window as any).__foodWorksheetPrintReport;
-    if (typeof printHandler === "function") { printHandler(worksheet, addedParameters); return; }
-    window.print();
+    setShowFoodPrintReport(true);
   };
 
   // ============================================================
@@ -2432,7 +2432,8 @@ export default function WorksheetDetails({
   // ============================================================
 
   return (
-    <WorksheetShell {...shellProps}>
+    <>
+      <WorksheetShell {...shellProps}>
       <div
         className="
           min-h-full
@@ -2546,6 +2547,33 @@ export default function WorksheetDetails({
           )}
 
 
+          {selectedParameter && normalizedRole === "qa" &&
+            normalizedWorksheetStatus === "submitted for qa review" &&
+            selectedParameterStatus === "approved" && (
+              <div className="mb-4 flex justify-end relative z-30">
+                <button
+                  type="button"
+                  onClick={() => handleQARequestRevision(selectedParameter)}
+                  className="px-4 py-2 bg-white border border-amber-300 text-amber-700 text-sm font-semibold rounded-lg hover:bg-amber-50 transition-colors shadow-sm"
+                >
+                  Request Revision
+                </button>
+              </div>
+            )}
+
+          {selectedParameter && normalizedRole === "qa" &&
+            normalizedWorksheetStatus === "submitted for qa review" &&
+            selectedParameterStatus === "approved" && (
+              <div className="mb-4 flex justify-end relative z-30">
+                <button
+                  type="button"
+                  onClick={() => handleQARequestRevision(selectedParameter)}
+                  className="px-4 py-2 bg-white border border-amber-300 text-amber-700 text-sm font-semibold rounded-lg hover:bg-amber-50 transition-colors shadow-sm"
+                >
+                  Request Revision
+                </button>
+              </div>
+            )}
 
           {selectedParameter && (
             <>
@@ -2581,18 +2609,10 @@ export default function WorksheetDetails({
                   ? () => handleApprove(selectedParameter)
                   : undefined
               }
-              // Reviewer: Request Revision after analysis is completed.
-              // QA: Return for Revision after the Reviewer has approved the
-              // parameter and the worksheet is awaiting QA validation.
-              // The same QA action is intentionally available in BOTH the
-              // full status section and the compact bottom section.
               onRequestRevision={
-                normalizedRole === "reviewer" && selectedParameterStatus === "analysis completed"
-                  ? () => handleRequestRevision(selectedParameter)
-                  : normalizedRole === "qa" &&
-                    normalizedWorksheetStatus === "submitted for qa review" &&
-                    selectedParameterStatus === "approved"
-                  ? () => handleQARequestRevision(selectedParameter)
+                (normalizedRole === "reviewer" && selectedParameterStatus === "analysis completed") ||
+                (normalizedRole === "qa" && normalizedWorksheetStatus === "submitted for qa review" && selectedParameterStatus === "approved")
+                  ? () => normalizedRole === "qa" ? handleQARequestRevision(selectedParameter) : handleRequestRevision(selectedParameter)
                   : undefined
               }
               analystComment={remarksByAnalystPerParam[selectedParameter.id] ?? (selectedParameter as any).remarksByAnalyst ?? null}
@@ -3162,15 +3182,7 @@ export default function WorksheetDetails({
               onCompleteAnalysis={normalizedRole === "analyst" && (selectedParameterStatus === "analysis started" || selectedParameterStatus === "analysis revision started" || revisionStartedParams.has(selectedParameter.id)) ? () => handleCompleteAnalysis(selectedParameter) : undefined}
               onStartRevision={normalizedRole === "analyst" && selectedParameterStatus === "analysis revision" ? () => handleStartRevision(selectedParameter) : undefined}
               onApprove={normalizedRole === "reviewer" && selectedParameterStatus === "analysis completed" ? () => handleApprove(selectedParameter) : undefined}
-              onRequestRevision={
-                normalizedRole === "reviewer" && selectedParameterStatus === "analysis completed"
-                  ? () => handleRequestRevision(selectedParameter)
-                  : normalizedRole === "qa" &&
-                    normalizedWorksheetStatus === "submitted for qa review" &&
-                    selectedParameterStatus === "approved"
-                  ? () => handleQARequestRevision(selectedParameter)
-                  : undefined
-              }
+              onRequestRevision={normalizedRole === "reviewer" && selectedParameterStatus === "analysis completed" ? () => handleRequestRevision(selectedParameter) : normalizedRole === "qa" && normalizedWorksheetStatus === "submitted for qa review" && selectedParameterStatus === "approved" ? () => handleQARequestRevision(selectedParameter) : undefined}
               analystComment={remarksByAnalystPerParam[selectedParameter.id] ?? (selectedParameter as any).remarksByAnalyst ?? null}
               reviewerComment={remarksByReviewerPerParam[selectedParameter.id] ?? (selectedParameter as any).remarksByReviewer ?? (selectedParameter as any).revisionComments ?? remarksQAPerParam[selectedParameter.id] ?? (selectedParameter as any).remarksByQA ?? null}
               analysisStartDate={(selectedParameter as any).analysisStartDate ?? null}
@@ -3395,6 +3407,14 @@ export default function WorksheetDetails({
           {workflowToast}
         </div>
       )}
+      {showFoodPrintReport && worksheet && (
+        <FoodPrintReport
+          worksheetInfo={worksheet}
+          parameters={addedParameters}
+          onClose={() => setShowFoodPrintReport(false)}
+        />
+      )}
     </WorksheetShell>
+    </>
   );
 }
