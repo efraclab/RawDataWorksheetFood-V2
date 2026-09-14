@@ -100,8 +100,11 @@ const PreparationEngine = forwardRef<
             const parameter = worksheet as any;
             const hasLod = Array.isArray(parameter?.preparations) &&
                 parameter.preparations.some((x: any) =>
-                    String(x?.preparationType ?? "").toLowerCase() === "lod" &&
-                    x?.preparationCategory === "sample"
+                    String(x?.preparationType ?? "").trim().toLowerCase() === "lod" &&
+                    (
+                        !x?.preparationCategory ||
+                        String(x?.preparationCategory ?? "").trim().toLowerCase() === "sample"
+                    )
                 );
             const hasLodCalculation = Array.isArray(parameter?.calculations) &&
                 parameter.calculations.some((x: any) => String(x?.calculationType ?? "").toLowerCase() === "lod");

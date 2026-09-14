@@ -73,15 +73,15 @@ const PreparationToast: React.FC<PreparationToastProps> = ({
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -50, scale: 0.95 }}
                     transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                    className="fixed right-6 top-6 z-[9999] w-96"
+                    className="fixed right-6 top-6 z-[9999] w-[420px] max-w-[calc(100vw-32px)]"
                 >
-                    <div className={`overflow-hidden rounded-lg border-l-4 bg-white shadow-xl ${current.border}`}>
-                        <div className="flex items-center gap-3 p-4">
+                    <div className={`overflow-hidden rounded-[14px] border border-slate-200 border-l-4 bg-white shadow-[0_10px_30px_rgba(15,23,42,0.16)] ${current.border}`}>
+                        <div className="flex items-center gap-3 px-5 py-4">
                             <motion.div
                                 initial={{ scale: 0 }}
                                 animate={{ scale: 1 }}
                                 transition={{ delay: 0.1, type: "spring", stiffness: 300 }}
-                                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${current.iconBg}`}
+                                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${current.iconBg}`}
                             >
                                 {current.icon}
                             </motion.div>
@@ -90,7 +90,7 @@ const PreparationToast: React.FC<PreparationToastProps> = ({
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: 0.15 }}
-                                    className="text-sm font-medium leading-snug text-gray-800"
+                                    className="text-[14px] font-medium leading-5 text-slate-700"
                                 >
                                     {message}
                                 </motion.p>
@@ -104,7 +104,7 @@ const PreparationToast: React.FC<PreparationToastProps> = ({
                                 whileHover={{ scale: 1.1 }}
                                 whileTap={{ scale: 0.9 }}
                                 aria-label="Close notification"
-                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
                             >
                                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

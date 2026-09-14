@@ -34,6 +34,8 @@ export interface ParameterDetail {
     submittedQaBy: string | null;
     status: string | null;
     additional_info: string | null;
+    /** V1-compatible camelCase alias used by worksheet payload/restore. */
+    additionalInfo?: string | null;
     other_info?: string | null;
     showAdditionalInfo?: boolean;
     showInternalStandardPreparation?: boolean;

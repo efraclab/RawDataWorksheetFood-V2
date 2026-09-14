@@ -3,6 +3,7 @@ import type { Analyst } from "../../plugins/food/models/Analyst";
 import type { Instrument } from "../../plugins/food/models/Instrument";
 import type { Chemical } from "../../plugins/food/models/Chemical";
 import type { Standard } from "../../plugins/food/models/Standard";
+import type { WorksheetRequest } from "./worksheetCreationService";
 
 export interface FetchWorksheetRequest {
   employeeId: string;
@@ -226,23 +227,31 @@ export const worksheetService = {
     }
   },
 
-  /** V1-compatible worksheet update used by Save Draft. */
+  /**
+   * Existing V1 worksheet update contract used by Save Draft.
+   *
+   * PUT /api/worksheets/{worksheetId}
+   */
   async update(
     worksheetId: string,
-    data: unknown
-  ): Promise<any> {
-    if (!worksheetId) throw new Error("Worksheet ID is required.");
+    worksheetData: WorksheetRequest
+  ): Promise<{ worksheetId: string }> {
+    if (!worksheetId) {
+      throw new Error("Worksheet ID is required.");
+    }
+
     try {
-      const response = await apiClient.post(
-        `/worksheets/update/${worksheetId}`,
-        data
+      const response = await apiClient.put<{ worksheetId: string }>(
+        `/worksheets/${worksheetId}`,
+        worksheetData
       );
+
       return response.data;
     } catch (error: any) {
       throw new Error(
         error?.response?.data?.message ||
-        error?.response?.data?.error ||
-        `Failed to save worksheet: ${error?.message ?? "Unknown error"}`
+          error?.response?.data?.error ||
+          `Failed to save worksheet: ${error?.message ?? "Unknown error"}`
       );
     }
   },

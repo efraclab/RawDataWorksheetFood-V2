@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence } from "framer-motion";
+import { CheckCircle2, X } from "lucide-react";
 import WorksheetShell from "./WorksheetShell";
 import {
   worksheetService,
@@ -43,6 +45,91 @@ interface WorksheetDetailsProps {
   worksheetId: string;
   lab?: string;
 }
+
+
+interface PersistedFilePayload {
+  id: number;
+  parameterId?: number;
+  preparationType: string;
+  label: string;
+  fileName: string;
+  fileDataBase64?: string;
+}
+
+function normalizeBase64(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const base64 = trimmed
+    .replace(/^data:[^;]+;base64,/i, "")
+    .trim();
+
+  if (!base64 || base64.length % 4 !== 0) return null;
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(base64)) return null;
+
+  return base64;
+}
+
+/**
+ * Existing files returned by the API have an id > 0. They are already
+ * persisted on the server, so Save Draft must not send their possibly
+ * missing/legacy fileDataBase64 back to the API.
+ *
+ * New files are created by WorksheetFileAttacher with id === 0 and must
+ * contain a real Base64 payload.
+ */
+function toFilePayload(
+  file: any,
+  defaults: {
+    id?: number;
+    parameterId?: number;
+    preparationType: string;
+    label: string;
+    fileName?: string;
+  }
+): PersistedFilePayload | null {
+  const originalId =
+    typeof file?.id === "number" && Number.isFinite(file.id)
+      ? file.id
+      : typeof defaults.id === "number"
+        ? defaults.id
+        : 0;
+
+  const isExistingServerFile = originalId > 0;
+  const base64 = normalizeBase64(file?.fileDataBase64);
+
+  const fileName = String(
+    file?.fileName ??
+      file?.name ??
+      defaults.fileName ??
+      ""
+  ).trim();
+
+  if (!fileName) return null;
+
+  const payload: PersistedFilePayload = {
+    id: isExistingServerFile ? originalId : 0,
+    ...(typeof defaults.parameterId === "number"
+      ? { parameterId: defaults.parameterId }
+      : {}),
+    preparationType:
+      String(file?.preparationType ?? defaults.preparationType),
+    label: String(file?.label ?? defaults.label),
+    fileName,
+  };
+
+  if (base64) {
+    payload.fileDataBase64 = base64;
+  } else if (!isExistingServerFile) {
+    // A newly added file cannot be persisted without its actual contents.
+    return null;
+  }
+
+  return payload;
+}
+
 
 export default function WorksheetDetails({
   worksheetId,
@@ -606,16 +693,51 @@ export default function WorksheetDetails({
     const restoredShowMobile: Record<number, boolean> = {};
     const restoredDiluents: Record<number, DiluentPreparation[]> = {};
     const restoredShowDiluent: Record<number, boolean> = {};
+    const restoredShowSystemSuitability: Record<number, boolean> = {};
 
     const restoredSuitabilities: Record<number, SystemSuitability[]> = {};
     const restoredParamFiles: Record<number, Record<string, AttachedFile[]>> = {};
 
     restoredParameters.forEach((parameter: any) => {
       const parameterId = parameter.id as number;
+      // V1 stores System Suitability inside the generic
+      // `preparations` collection using preparationCategory
+      // `system_suitability`. Some older responses may also expose
+      // systemSuitabilities/systemSuitability directly, so support both.
+      const preparationsForParameter = Array.isArray(parameter?.preparations)
+        ? parameter.preparations
+        : [];
+
+      const rawSuitabilitiesFromPreparations = preparationsForParameter
+        .filter(
+          (item: any) =>
+            String(item?.preparationCategory ?? "").toLowerCase() ===
+            "system_suitability"
+        )
+        .map((item: any, index: number) => {
+          let steps = item?.steps;
+
+          if (typeof steps === "string") {
+            try {
+              steps = JSON.parse(steps);
+            } catch {
+              steps = [];
+            }
+          }
+
+          return {
+            id: Number(item?.id ?? Date.now() + index),
+            label: item?.label ?? `System Suitability ${index + 1}`,
+            steps: Array.isArray(steps) ? steps : [],
+          } as SystemSuitability;
+        });
+
       const rawSuitabilities =
-        parameter?.systemSuitabilities ??
-        parameter?.systemSuitability ??
-        [];
+        rawSuitabilitiesFromPreparations.length > 0
+          ? rawSuitabilitiesFromPreparations
+          : (parameter?.systemSuitabilities ??
+            parameter?.systemSuitability ??
+            []);
 
       if (Array.isArray(rawSuitabilities)) {
         restoredSuitabilities[parameterId] =
@@ -647,11 +769,25 @@ export default function WorksheetDetails({
         (parameter as any).additionalInfo ??
         (parameter as any).additional_info ??
         "";
+      const restoredAdditionalInfoValue =
+        (parameter as any).additionalInfo ??
+        (parameter as any).additional_info ??
+        (parameter as any).other_info ??
+        "";
+
+      restoredAdditionalInfo[parameter.id] =
+        typeof restoredAdditionalInfoValue === "string"
+          ? restoredAdditionalInfoValue
+          : String(restoredAdditionalInfoValue ?? "");
+
+      // If the API does not return the UI toggle flag, infer Active from
+      // persisted text. This is required for the existing V1 backend
+      // response, which returns additional_info but may omit the flag.
       restoredShowAdditionalInfo[parameter.id] =
         Boolean(
           (parameter as any).showAdditionalInfo ??
           (parameter as any).show_additional_info ??
-          false
+          String(restoredAdditionalInfo[parameter.id]).trim().length > 0
         );
 
       const preparations = Array.isArray(parameter.preparations)
@@ -699,6 +835,20 @@ export default function WorksheetDetails({
       restoredShowMobile[parameter.id] = mobiles.length > 0;
       restoredDiluents[parameter.id] = diluents;
       restoredShowDiluent[parameter.id] = diluents.length > 0;
+
+      restoredShowAdditionalInfo[parameter.id] =
+        Boolean(
+          (parameter as any).showAdditionalInfo ??
+          (parameter as any).show_additional_info ??
+          String(restoredAdditionalInfo[parameter.id] ?? "").trim().length > 0
+        );
+
+      restoredShowSystemSuitability[parameter.id] =
+        Boolean(
+          (parameter as any).showSystemSuitability ??
+          (parameter as any).show_system_suitability ??
+          (restoredSuitabilities[parameter.id] ?? []).length > 0
+        );
     });
 
     setAddedInstruments(restoredInstruments);
@@ -712,9 +862,19 @@ export default function WorksheetDetails({
     setShowMobilePhasePreparation(restoredShowMobile);
     setDiluentPreparationsPerParam(restoredDiluents);
     setShowDiluentPreparation(restoredShowDiluent);
+    setShowSystemSuitability(restoredShowSystemSuitability);
 
-setAddedParameters(restoredParameters);
-        setExpandedParameterId(null);
+    setAddedParameters(restoredParameters);
+
+    // V1 behavior: after restoring a worksheet with parameters,
+    // automatically open the first parameter. This also gives the
+    // PreparationEngine a mounted parameter context so restored LOD
+    // state can be displayed.
+    setExpandedParameterId(
+      restoredParameters.length > 0
+        ? restoredParameters[0].id
+        : null
+    );
       } catch (err: any) {
         if (cancelled) {
           return;
@@ -1328,81 +1488,363 @@ setAddedParameters(restoredParameters);
   };
 
   /*
-   * Real Save Draft persistence will be connected in the
-   * workflow/persistence phase.
+   * V1-compatible Save Draft.
    *
-   * No fake API call is performed here.
+   * IMPORTANT: WorksheetDetails owns several parameter-local state
+   * collections. Save must merge ALL of them into the single parameter
+   * payload before calling the existing worksheet API.
    */
   const [isSavingDraft, setIsSavingDraft] = useState(false);
-  const [draftTast, setDraftToast] = useState<string | null>(null);
+  const [draftToast, setDraftToast] = useState<string | null>(null);
 
   const handleSaveDraft = async () => {
     if (!worksheet || !displayWorksheetId || isSavingDraft) return;
+
     setIsSavingDraft(true);
     setDraftToast(null);
-    try {
-      const currentParameter = expandedParameterId === null
-        ? null
-        : addedParameters.find(p => p.id === expandedParameterId) ?? null;
+    setSaveSuccess(false);
 
-      let parameters = [...addedParameters] as any[];
-      if (currentParameter && preparationEngineRef.current) {
+    try {
+      const currentParameterId = expandedParameterId;
+
+      let parameters = addedParameters.map((parameter: any) => {
+        const parameterId = parameter.id as number;
+
+        const parameterFiles = (
+          filesPerParam[parameterId]?.[PARAM_LEVEL_KEY] ?? []
+        )
+          .map((file: any) =>
+            toFilePayload(file, {
+              parameterId,
+              preparationType: "parameter_file",
+              label: "Other Files",
+            })
+          )
+          .filter((file: PersistedFilePayload | null): file is PersistedFilePayload => file !== null);
+
+        const existingPreparations = Array.isArray(parameter.preparations)
+          ? parameter.preparations
+          : [];
+
+        // Rebuild these V1 categories from their dedicated V2 state.
+        // This prevents duplicates and guarantees edits/deletes are saved.
+        const nonBufferPreparations = existingPreparations.filter(
+          (item: any) =>
+            String(item?.preparationCategory ?? "").toLowerCase() !== "buffer"
+        );
+        const nonMobilePreparations = nonBufferPreparations.filter(
+          (item: any) =>
+            String(item?.preparationCategory ?? "").toLowerCase() !== "mobile_phase"
+        );
+        const nonDiluentPreparations = nonMobilePreparations.filter(
+          (item: any) =>
+            String(item?.preparationCategory ?? "").toLowerCase() !== "diluent"
+        );
+        const nonSystemPreparations = nonDiluentPreparations.filter(
+          (item: any) =>
+            String(item?.preparationCategory ?? "").toLowerCase() !==
+            "system_suitability"
+        );
+
+        const sectionPreparations: any[] = [];
+
+        (bufferPreparationPerParam[parameterId] ?? []).forEach(
+          (buffer: any) => {
+            sectionPreparations.push({
+              id: typeof buffer?.id === "number" ? buffer.id : undefined,
+              label: buffer?.label,
+              preparationCategory: "buffer",
+              preparationType: null,
+              assignedStandardId: null,
+              steps: JSON.stringify(buffer?.steps ?? []),
+              content: null,
+            });
+          }
+        );
+
+        (mobilePhasePerParam[parameterId] ?? []).forEach(
+          (mobile: any) => {
+            sectionPreparations.push({
+              id: mobile?.id,
+              label: mobile?.label,
+              preparationCategory: "mobile_phase",
+              preparationType: null,
+              assignedStandardId: null,
+              steps: null,
+              content: mobile?.content ?? "",
+            });
+          }
+        );
+
+        (diluentPreparationsPerParam[parameterId] ?? []).forEach(
+          (diluent: any) => {
+            sectionPreparations.push({
+              id: diluent?.id,
+              label: diluent?.label,
+              preparationCategory: "diluent",
+              preparationType: null,
+              assignedStandardId: null,
+              steps: null,
+              content: diluent?.content ?? "",
+            });
+          }
+        );
+
+        (systemSuitabilityPerParam[parameterId] ?? []).forEach(
+          (suitability: SystemSuitability) => {
+            sectionPreparations.push({
+              id: suitability.id,
+              label: suitability.label,
+              preparationCategory: "system_suitability",
+              preparationType: null,
+              assignedStandardId: null,
+              steps: JSON.stringify(suitability.steps ?? []),
+              content: null,
+            });
+          }
+        );
+
+        return {
+          ...parameter,
+          instruments:
+            addedInstruments[parameterId] ?? parameter.instruments ?? [],
+          chemicals:
+            addedChemicals[parameterId] ?? parameter.chemicals ?? [],
+          standards:
+            addedStandards[parameterId] ?? parameter.standards ?? [],
+          internalStandards: parameter.internalStandards ?? [],
+          media: parameter.media ?? [],
+
+          additional_info:
+            additionalInfoPerParam[parameterId] ??
+            parameter.additional_info ??
+            parameter.additionalInfo ??
+            null,
+          additionalInfo:
+            additionalInfoPerParam[parameterId] ??
+            parameter.additionalInfo ??
+            parameter.additional_info ??
+            null,
+          other_info:
+            parameter.other_info ??
+            parameter.otherInfo ??
+            null,
+          showAdditionalInfo:
+            showAdditionalInfo[parameterId] ??
+            Boolean(
+              parameter.showAdditionalInfo ??
+              parameter.show_additional_info ??
+              String(
+                additionalInfoPerParam[parameterId] ??
+                parameter.additional_info ??
+                ""
+              ).trim()
+            ),
+          showSystemSuitability:
+            showSystemSuitability[parameterId] ??
+            (systemSuitabilityPerParam[parameterId] ?? []).length > 0,
+
+          preparations: [
+            ...nonSystemPreparations,
+            ...sectionPreparations,
+          ],
+
+          // Always rebuild parameter-level files from V2 state.
+          // This also persists deleting the last parameter file.
+          files: [
+            ...((parameter.files ?? []) as any[]).filter(
+              (file: any) =>
+                String(file?.preparationType ?? "").toLowerCase() !==
+                "parameter_file"
+            ),
+            ...parameterFiles,
+          ],
+        };
+      });
+
+      // ============================================================
+      // CURRENT PREPARATION ENGINE MODULE
+      // ============================================================
+      // LOD currently lives inside Core PreparationEngine. Collect its
+      // draft only for the expanded parameter and merge it with all the
+      // other parameter-local sections above.
+      if (currentParameterId !== null && preparationEngineRef.current) {
         const preparationDraft = preparationEngineRef.current.collectDraft();
-        const modules = preparationDraft.modules as Record<string, any>;
-        const lod = modules["food.lod"] ?? modules["lod"];
-        if (lod) {
-          const mappedPreparations = (lod.samplePreparations ?? []).map((sample: any) => ({
-            label: sample.label,
-            preparationCategory: "sample",
-            preparationType: "lod",
-            assignedStandardId: null,
-            steps: JSON.stringify(sample.steps ?? []),
-            content: null,
-            isPreparationCompleted: Boolean(lod.completed),
-            completedAt: lod.completedAt ?? null,
-          }));
-          const mappedFiles = (lod.files ?? []).map((file: any, i: number) => ({
-            id: typeof file.id === "number" ? file.id : i,
-            preparationType: "lod",
-            label: "Preparation Files",
-            fileName: file.name ?? file.fileName ?? "",
-            fileDataBase64: file.fileDataBase64 ?? null,
-          }));
-          const mappedCalculations = (lod.calculations ?? []).map((calc: any) => ({
-            label: calc.label,
-            calculationType: "lod",
-            data: calc,
-          }));
-          parameters = parameters.map(p => p.id === currentParameter.id
-            ? { ...p, preparations: mappedPreparations, calculations: mappedCalculations, files: mappedFiles, preparationCompletedAt: lod.completedAt ?? null }
-            : p);
+        const modules = (preparationDraft?.modules ?? {}) as Record<string, any>;
+
+        // PreparationEngine.collectDraft() stores the result of each
+        // module's getDraft(). The current LOD module itself returns a
+        // module-shaped draft, so support both shapes here:
+        //   modules["food.lod"] = { samplePreparations, ... }
+        // and
+        //   modules["food.lod"] = { activeGroups, modules: { "food.lod": {...} } }
+        const rawLod = modules["food.lod"] ?? modules["lod"];
+        const lod =
+          rawLod?.modules?.["food.lod"] ??
+          rawLod?.modules?.lod ??
+          rawLod;
+
+        if (lod && (
+          Array.isArray(lod.samplePreparations) ||
+          Array.isArray(lod.calculations) ||
+          Array.isArray(lod.files)
+        )) {
+          const mappedPreparations = (lod.samplePreparations ?? []).map(
+            (sample: any) => ({
+              label: sample?.label,
+              preparationCategory: "sample",
+              preparationType: "lod",
+              assignedStandardId: null,
+              steps: JSON.stringify(sample?.steps ?? []),
+              content: null,
+              isPreparationCompleted: Boolean(lod?.completed),
+              completedAt: lod?.completedAt ?? null,
+            })
+          );
+
+          const mappedFiles = (lod.files ?? [])
+            .map((file: any) =>
+              toFilePayload(file, {
+                id:
+                  typeof file?.id === "number"
+                    ? file.id
+                    : 0,
+                parameterId: currentParameterId,
+                preparationType: "lod",
+                label: "Preparation Files",
+                fileName: file?.name ?? file?.fileName ?? "",
+              })
+            )
+            .filter((file: PersistedFilePayload | null): file is PersistedFilePayload => file !== null);
+
+          const mappedCalculations = (lod.calculations ?? []).map(
+            (calculation: any) => ({
+              label: calculation?.label,
+              calculationType: "lod",
+              data: calculation,
+            })
+          );
+
+          parameters = parameters.map((parameter: any) => {
+            if (parameter.id !== currentParameterId) return parameter;
+
+            const existingPreparations = Array.isArray(parameter.preparations)
+              ? parameter.preparations
+              : [];
+            const existingFiles = Array.isArray(parameter.files)
+              ? parameter.files
+              : [];
+            const existingCalculations = Array.isArray(parameter.calculations)
+              ? parameter.calculations
+              : [];
+
+            return {
+              ...parameter,
+              preparations: [
+                ...existingPreparations.filter(
+                  (item: any) =>
+                    String(item?.preparationType ?? "").toLowerCase() !==
+                    "lod"
+                ),
+                ...mappedPreparations,
+              ],
+              calculations: [
+                ...existingCalculations.filter(
+                  (item: any) =>
+                    String(item?.calculationType ?? "").toLowerCase() !==
+                    "lod"
+                ),
+                ...mappedCalculations,
+              ],
+              files: [
+                ...existingFiles.filter(
+                  (item: any) =>
+                    String(item?.preparationType ?? "").toLowerCase() !==
+                    "lod"
+                ),
+                ...mappedFiles,
+              ],
+              preparationCompletedAt:
+                lod?.completedAt ?? parameter.preparationCompletedAt ?? null,
+            };
+          });
         }
       }
+
+      // Keep the payload strictly compatible with WorksheetRequest.
+      // Some WorksheetDetail variants expose natureOfSample/dueDate as
+      // unknown-ish values, while WorksheetRequest expects strings.
+      const natureOfSample =
+        typeof worksheet.sample?.natureOfSample === "string"
+          ? worksheet.sample.natureOfSample
+          : undefined;
+
+      const dueDate =
+        typeof worksheet.sample?.dueDate === "string"
+          ? worksheet.sample.dueDate
+          : undefined;
 
       const payload = {
         role: localStorage.getItem("Role") ?? "",
         worksheetId: displayWorksheetId,
         registrationInfo: {
-          registrationNo: worksheet.sample?.registrationNo ?? "",
-          sampleName: worksheet.sample?.sampleName ?? "",
-          sampleCode: worksheet.sample?.sampleCode ?? "",
+          registrationNo:
+            typeof worksheet.sample?.registrationNo === "string"
+              ? worksheet.sample.registrationNo
+              : "",
+          sampleName:
+            typeof worksheet.sample?.sampleName === "string"
+              ? worksheet.sample.sampleName
+              : "",
+          sampleCode:
+            typeof worksheet.sample?.sampleCode === "string"
+              ? worksheet.sample.sampleCode
+              : "",
+          sampleQuantity: Number(worksheet.sample?.sampleQuantity ?? 0),
+          natureOfSample,
           numberOfParameters: parameters.length,
-          lab: worksheet.sample?.lab ?? displayLab,
+          dueDate,
+          lab:
+            typeof worksheet.sample?.lab === "string"
+              ? worksheet.sample.lab
+              : displayLab,
         },
-        documentInfo: { status: worksheet.sample?.status ?? "Draft" },
+        documentInfo: {
+          status:
+            typeof worksheet.sample?.status === "string"
+              ? worksheet.sample.status
+              : "Draft",
+        },
         parameters,
       };
 
-      const response = await worksheetService.update(displayWorksheetId, payload);
-      if (response === undefined || response === null) throw new Error("Worksheet draft could not be saved.");
-      setDraftToast(`Draft saved successfully: ${displayWorksheetId}`);
-      window.setTimeout(() => setDraftToast(null), 3000);
-      const refreshed = await worksheetService.getById(displayWorksheetId, { employeeId: localStorage.getItem("EmployeeId") ?? "", role: localStorage.getItem("Role") ?? "" });
+      const response = await worksheetService.update(
+        displayWorksheetId,
+        payload
+      );
+
+      if (!response?.worksheetId && response !== undefined) {
+        // Some deployments return an empty 204-like body. A successful
+        // HTTP response is still treated as success by worksheetService.
+      }
+
+      // Refresh only the worksheet container. The local parameter state is
+      // deliberately preserved so the just-entered UI does not disappear
+      // while the backend response is being normalized.
+      const refreshed = await worksheetService.getById(displayWorksheetId, {
+        employeeId: localStorage.getItem("EmployeeId") ?? "",
+        role: localStorage.getItem("Role") ?? "",
+      });
       if (refreshed) setWorksheet(refreshed);
+
+      setSaveSuccess(true);
+      setDraftToast(`Draft saved successfully: ${displayWorksheetId}`);
     } catch (error: any) {
       console.error("Save draft error:", error);
-      setDraftToast(error?.message ?? "Failed to save worksheet.");
-      window.setTimeout(() => setDraftToast(null), 4000);
+      setSaveSuccess(false);
+      setDraftToast(
+        error?.message ?? "Failed to save worksheet."
+      );
     } finally {
       setIsSavingDraft(false);
     }
@@ -1516,7 +1958,19 @@ setAddedParameters(restoredParameters);
   // ============================================================
 
   const isSaving = isSavingDraft;
-  const [saveSuccess] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  useEffect(() => {
+    if (!draftToast) return;
+
+    const timer = window.setTimeout(() => {
+      setDraftToast(null);
+      setSaveSuccess(false);
+    }, saveSuccess ? 3000 : 4000);
+
+    return () => window.clearTimeout(timer);
+  }, [draftToast, saveSuccess]);
+
   const [isSubmitting] = useState(false);
   const [isSubmittingForQA] = useState(false);
   const [isApprovingWorksheet] = useState(false);
@@ -2329,6 +2783,85 @@ setAddedParameters(restoredParameters);
             onSelectAnalyst={handleAnalystSelected}
             lab={displayLab}
           />
+
+          {draftToast &&
+            typeof document !== "undefined" &&
+            createPortal(
+              <div
+                className="fixed inset-0 z-[99999] pointer-events-none"
+                aria-live="polite"
+                aria-atomic="true"
+              >
+                <div className="absolute right-6 top-6 pointer-events-auto">
+                  <div
+                    className={`relative w-[390px] max-w-[calc(100vw-32px)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_12px_35px_rgba(15,23,42,0.20)] ${
+                      saveSuccess
+                        ? "border-l-4 border-l-emerald-500"
+                        : "border-l-4 border-l-red-500"
+                    }`}
+                  >
+                    <div className="flex min-h-[72px] items-center gap-3 px-4 py-3">
+                      <div
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+                          saveSuccess
+                            ? "bg-emerald-50 text-emerald-600"
+                            : "bg-red-50 text-red-600"
+                        }`}
+                      >
+                        {saveSuccess ? (
+                          <CheckCircle2 size={19} strokeWidth={2.4} />
+                        ) : (
+                          <X size={19} strokeWidth={2.4} />
+                        )}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className={`m-0 text-[13px] font-semibold leading-5 ${
+                            saveSuccess ? "text-slate-800" : "text-red-700"
+                          }`}
+                        >
+                          {draftToast}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDraftToast(null);
+                          setSaveSuccess(false);
+                        }}
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                        aria-label="Close notification"
+                      >
+                        <X size={16} strokeWidth={2} />
+                      </button>
+                    </div>
+
+                    <div
+                      className={`h-[3px] w-full origin-left ${
+                        saveSuccess ? "bg-emerald-500" : "bg-red-500"
+                      }`}
+                      style={{
+                        animation: `${
+                          saveSuccess
+                            ? "worksheetDraftToastProgress 3s linear forwards"
+                            : "worksheetDraftToastProgress 4s linear forwards"
+                        }`,
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <style>{`
+                  @keyframes worksheetDraftToastProgress {
+                    from { transform: scaleX(1); }
+                    to { transform: scaleX(0); }
+                  }
+                `}</style>
+              </div>,
+              document.body
+            )}
 
         </div>
       </div>
