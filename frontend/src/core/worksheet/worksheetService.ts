@@ -4,6 +4,7 @@ import type { Instrument } from "../../plugins/food/models/Instrument";
 import type { Chemical } from "../../plugins/food/models/Chemical";
 import type { Standard } from "../../plugins/food/models/Standard";
 import type { WorksheetRequest } from "./worksheetCreationService";
+import type { ParameterDetail } from "../../plugins/food/models/ParameterDetail";
 
 export interface FetchWorksheetRequest {
   employeeId: string;
@@ -252,6 +253,53 @@ export const worksheetService = {
         error?.response?.data?.message ||
           error?.response?.data?.error ||
           `Failed to save worksheet: ${error?.message ?? "Unknown error"}`
+      );
+    }
+  },
+
+
+  async updateParameter(
+    parameterId: number,
+    parameterData: ParameterDetail
+  ): Promise<{ parameterId: number }> {
+    if (!parameterId) {
+      throw new Error("Parameter ID is required.");
+    }
+
+    try {
+      const response = await apiClient.put<{ parameterId: number }>(
+        `/worksheets/parameters/${parameterId}`,
+        parameterData
+      );
+      return response.data;
+    } catch (error: any) {
+      throw new Error(
+        error?.response?.data?.message ||
+          error?.response?.data?.error ||
+          `Failed to update parameter: ${error?.message ?? "Unknown error"}`
+      );
+    }
+  },
+
+  async insertWorksheetLog(payload: {
+    worksheetId?: string | null;
+    parameterId?: number | null;
+    remarks?: string | null;
+    action: string;
+    employeeId: string;
+    role: string;
+  }): Promise<{ message: string }> {
+    try {
+      const response = await apiClient.post<{ message: string }>(
+        "/logs",
+        payload
+      );
+      return response.data;
+    } catch (error: any) {
+      throw new Error(
+        error?.response?.data?.message ||
+          error?.response?.data?.error ||
+          `Failed to insert worksheet log: ${error?.message ?? "Unknown error"}`
       );
     }
   },

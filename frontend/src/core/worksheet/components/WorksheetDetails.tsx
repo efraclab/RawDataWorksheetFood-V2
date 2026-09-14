@@ -27,6 +27,7 @@ import FoodStandardSection from "../../../plugins/food/components/worksheet/Food
 import FoodBufferPreparation from "../../../plugins/food/components/worksheet/FoodBufferPreparation";
 import FoodMobilePhasePreparation from "../../../plugins/food/components/worksheet/FoodMobilePhasePreparation";
 import FoodDiluentPreparation from "../../../plugins/food/components/worksheet/FoodDiluentPreparation";
+import AnalysisLockSection from "../../../plugins/food/components/worksheet/AnalysisLockSection";
 import PreparationEditorDialog from "../../../plugins/food/components/worksheet/PreparationEditorDialog";
 import type { Instrument } from "../../../plugins/food/models/Instrument";
 import type { Chemical } from "../../../plugins/food/models/Chemical";
@@ -38,6 +39,10 @@ import type { BufferPreparation } from "../../../plugins/food/models/BufferPrepa
 import type { MobilePhasePreparation } from "../../../plugins/food/models/MobilePhasePreparation";
 import type { DiluentPreparation } from "../../../plugins/food/models/DiluentPreparation";
 import CopyFromWorksheetDialog from "../../../plugins/food/components/worksheet/Copyfromworksheetdialog";
+import SubmitDialog from "../../../plugins/food/components/dialogs/SubmitDialog";
+import WorkflowActionDialog from "../../../plugins/food/components/dialogs/WorkflowActionDialog";
+import CompleteAnalysisDialog from "../../../plugins/food/components/dialogs/CompleteAnalysisDialog";
+import ApproveWorksheetDialog from "../../../plugins/food/components/dialogs/ApproveWorksheetDialog";
 import PreparationEngine, { type PreparationEngineHandle } from "../../preparation-engine/components/PreparationEngine";
 import { foodPreparationModuleRegistry } from "../../../plugins/food/preparation-engine/foodPreparationModuleRegistry";
 
@@ -182,6 +187,46 @@ export default function WorksheetDetails({
 
   const [analysts, setAnalysts] =
     useState<Analyst[]>([]);
+
+  // Latest persisted status for each parameter.
+  // This must remain separate from addedParameters because workflow actions
+  // can update a parameter status before the worksheet is refreshed.
+  const [parameterStatusPerParam, setParameterStatusPerParam] =
+    useState<Record<number, string>>({});
+
+  // ============================================================
+  // V1 WORKFLOW / LOCK STATE
+  // ============================================================
+  const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  const [showSubmitForQADialog, setShowSubmitForQADialog] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmittingForQA, setIsSubmittingForQA] = useState(false);
+  const [showStartAnalysisDialog, setShowStartAnalysisDialog] = useState(false);
+  const [showCompleteAnalysisDialog, setShowCompleteAnalysisDialog] = useState(false);
+  const [showApproveDialog, setShowApproveDialog] = useState(false);
+  const [showRevisionDialog, setShowRevisionDialog] = useState(false);
+  const [showQARevisionDialog, setShowQARevisionDialog] = useState(false);
+  const [showApproveWorksheetDialog, setShowApproveWorksheetDialog] = useState(false);
+  const [isStartingAnalysis, setIsStartingAnalysis] = useState(false);
+  const [isCompletingAnalysis, setIsCompletingAnalysis] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
+  const [isRequestingRevision, setIsRequestingRevision] = useState(false);
+  const [isQARequestingRevision, setIsQARequestingRevision] = useState(false);
+  const [isApprovingWorksheet, setIsApprovingWorksheet] = useState(false);
+  const [parameterForAnalysis, setParameterForAnalysis] = useState<ParameterDetail | null>(null);
+  const [parameterForApproval, setParameterForApproval] = useState<ParameterDetail | null>(null);
+  const [remarksByAnalystPerParam, setRemarksByAnalystPerParam] = useState<Record<number, string>>({});
+  const [remarksByReviewerPerParam, setRemarksByReviewerPerParam] = useState<Record<number, string | null>>({});
+  const [remarksQAPerParam, setRemarksQAPerParam] = useState<Record<number, string | null>>({});
+  const [revisionStartedParams, setRevisionStartedParams] = useState<Set<number>>(new Set());
+  const [workflowToast, setWorkflowToast] = useState<string | null>(null);
+  const [workflowToastType, setWorkflowToastType] = useState<"success" | "error">("success");
+
+  const showWorkflowToast = (message: string, type: "success" | "error" = "success") => {
+    setWorkflowToast(message);
+    setWorkflowToastType(type);
+    window.setTimeout(() => setWorkflowToast(null), 4000);
+  };
 
   // ============================================================
   // V1 SYSTEM SUITABILITY / PARAMETER FILES
@@ -864,6 +909,31 @@ export default function WorksheetDetails({
     setShowDiluentPreparation(restoredShowDiluent);
     setShowSystemSuitability(restoredShowSystemSuitability);
 
+    const restoredStatus: Record<number, string> = {};
+    const restoredAnalystRemarks: Record<number, string> = {};
+    const restoredReviewerRemarks: Record<number, string | null> = {};
+    const restoredQARemarks: Record<number, string | null> = {};
+    restoredParameters.forEach((parameter: any) => {
+      restoredStatus[parameter.id] = String(parameter.status ?? "CREATED");
+      const analyst = parameter.remarksByAnalyst ?? parameter.remarks_by_analyst ?? parameter.analystComment ?? parameter.analyst_comment;
+      const reviewer = parameter.remarksByReviewer ?? parameter.remarks_by_reviewer;
+      const qa = parameter.remarksByQA ?? parameter.remarks_by_qa;
+      if (analyst) restoredAnalystRemarks[parameter.id] = String(analyst);
+      if (reviewer) restoredReviewerRemarks[parameter.id] = String(reviewer);
+      if (qa) restoredQARemarks[parameter.id] = String(qa);
+    });
+    setParameterStatusPerParam(restoredStatus);
+    setRemarksByAnalystPerParam(restoredAnalystRemarks);
+    setRemarksByReviewerPerParam(restoredReviewerRemarks);
+    setRemarksQAPerParam(restoredQARemarks);
+    setPreparationLockedPerParam(Object.fromEntries(
+      restoredParameters.map((parameter: any) => [
+        parameter.id, [
+          "analysis pending", "analysis completed", "analysis revision",
+          "analysis revision started", "approved"
+        ].includes(String(parameter.status ?? "").trim().toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " "))
+      ])
+    ));
     setAddedParameters(restoredParameters);
 
     // V1 behavior: after restoring a worksheet with parameters,
@@ -1003,9 +1073,12 @@ export default function WorksheetDetails({
       ].includes(selectedParameterStatus)
   );
 
+  // V1 rule: "Analysis Revision Started" is the only state that
+  // overrides the normal analysis lock for the Analyst.
   const isPreparationLocked = Boolean(
-    workflowPreparationLocked ||
-    (selectedParameter && preparationLockedPerParam[selectedParameter.id])
+    selectedParameter &&
+      !isAnalystRevisionStarted &&
+      (workflowPreparationLocked || preparationLockedPerParam[selectedParameter.id])
   );
 
   const canUnlockPreparation =
@@ -1495,6 +1568,7 @@ export default function WorksheetDetails({
    * payload before calling the existing worksheet API.
    */
   const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
   const [draftToast, setDraftToast] = useState<string | null>(null);
 
   const handleSaveDraft = async () => {
@@ -1851,6 +1925,284 @@ export default function WorksheetDetails({
   };
 
   // ============================================================
+  // V1 WORKFLOW ACTIONS
+  // ============================================================
+
+  const getEmployeeId = () => localStorage.getItem("EmployeeId") ?? "";
+  const getRole = () => localStorage.getItem("Role") ?? "";
+
+  const handleInitiateUnlock = (parameter: ParameterDetail) => {
+    if (normalizedRole !== "reviewer") return;
+    setParameterForApproval(parameter);
+    // Reuse the exact V1-style action dialog for unlock confirmation.
+    setShowRevisionDialog(false);
+    setShowStartAnalysisDialog(false);
+    setShowCompleteAnalysisDialog(false);
+    setWorkflowUnlockTarget(parameter);
+    setShowUnlockDialog(true);
+  };
+
+  const [workflowUnlockTarget, setWorkflowUnlockTarget] = useState<ParameterDetail | null>(null);
+  const [showUnlockDialog, setShowUnlockDialog] = useState(false);
+  const [isUnlocking, setIsUnlocking] = useState(false);
+
+  const handleConfirmUnlock = async () => {
+    if (!workflowUnlockTarget) return;
+    setIsUnlocking(true);
+    try {
+      const updated = { ...workflowUnlockTarget, status: "created" };
+      const response = await worksheetService.updateParameter(workflowUnlockTarget.id, updated);
+      if (!response?.parameterId) throw new Error("Failed to unlock parameter");
+      setAddedParameters(prev => prev.map(p => p.id === workflowUnlockTarget.id ? updated : p));
+      setParameterStatusPerParam(prev => ({ ...prev, [workflowUnlockTarget.id]: "created" }));
+      setPreparationLockedPerParam(prev => ({ ...prev, [workflowUnlockTarget.id]: false }));
+      setWorksheet(prev => prev ? { ...prev, sample: { ...prev.sample, status: "Draft" } } : prev);
+      await worksheetService.insertWorksheetLog({ worksheetId: displayWorksheetId, parameterId: workflowUnlockTarget.id, action: "Parameter Unlocked", remarks: `Parameter ${workflowUnlockTarget.parameterName} unlocked and worksheet returned to Draft`, employeeId: getEmployeeId(), role: getRole() });
+      showWorkflowToast("Parameter unlocked successfully!");
+      setShowUnlockDialog(false);
+      setWorkflowUnlockTarget(null);
+    } catch (error: any) {
+      showWorkflowToast(`Error unlocking parameter: ${error?.message || error}`, "error");
+    } finally { setIsUnlocking(false); }
+  };
+
+  const handleStartRevision = async (parameter: ParameterDetail) => {
+    if (normalizedRole !== "analyst") return;
+    const parameterId = parameter.id;
+    const revisionStartDate = new Date().toISOString();
+    setRevisionStartedParams(prev => { const next = new Set(prev); next.add(parameterId); return next; });
+    const optimistic = { ...parameter, status: "Analysis Revision Started", revisionStartDate };
+    setAddedParameters(prev => prev.map(p => p.id === parameterId ? optimistic : p));
+    setParameterStatusPerParam(prev => ({ ...prev, [parameterId]: "Analysis Revision Started" }));
+    setPreparationLockedPerParam(prev => ({ ...prev, [parameterId]: false }));
+    try {
+      const response = await worksheetService.updateParameter(parameterId, optimistic);
+      if (!response?.parameterId) throw new Error("Failed to start revision.");
+      await worksheetService.insertWorksheetLog({ worksheetId: displayWorksheetId, parameterId, action: "Revision Started", remarks: "Analyst started revision — parameter unlocked for editing", employeeId: getEmployeeId(), role: getRole() });
+      showWorkflowToast("Revision started. Parameter is now unlocked for editing.");
+    } catch (error: any) {
+      setRevisionStartedParams(prev => { const next = new Set(prev); next.delete(parameterId); return next; });
+      setAddedParameters(prev => prev.map(p => p.id === parameterId ? { ...p, status: "Analysis Revision" } : p));
+      setParameterStatusPerParam(prev => ({ ...prev, [parameterId]: "Analysis Revision" }));
+      setPreparationLockedPerParam(prev => ({ ...prev, [parameterId]: true }));
+      showWorkflowToast(`Failed to start revision: ${error?.message || error}`, "error");
+    }
+  };
+
+  const handleStartAnalysis = (parameter: ParameterDetail) => {
+    if (normalizedRole !== "analyst") return;
+    if (!["analysis pending", "analysis revision started"].includes(selectedParameterStatus) &&
+        !revisionStartedParams.has(parameter.id)) return;
+    setParameterForAnalysis(parameter);
+    setShowStartAnalysisDialog(true);
+  };
+
+  const handleConfirmStartAnalysis = async () => {
+    if (!parameterForAnalysis) return;
+    setIsStartingAnalysis(true);
+    try {
+      const analysisStartDate = new Date().toISOString();
+      const updated = { ...parameterForAnalysis, status: "Analysis Started", analyzedBy: parameterForAnalysis.analyzedBy ?? getEmployeeId(), analysisStartDate };
+      const response = await worksheetService.updateParameter(parameterForAnalysis.id, updated);
+      if (!response?.parameterId) throw new Error("Failed to start analysis");
+      setAddedParameters(prev => prev.map(p => p.id === updated.id ? updated : p));
+      setParameterStatusPerParam(prev => ({ ...prev, [updated.id]: "Analysis Started" }));
+      setPreparationLockedPerParam(prev => ({ ...prev, [updated.id]: false }));
+      await worksheetService.insertWorksheetLog({ worksheetId: displayWorksheetId, parameterId: updated.id, action: "Analysis Started", remarks: `Analysis started for parameter "${updated.parameterName}"`, employeeId: getEmployeeId(), role: getRole() });
+      showWorkflowToast("Analysis started successfully! You can now proceed with the analysis.");
+      setShowStartAnalysisDialog(false); setParameterForAnalysis(null);
+    } catch (error: any) { showWorkflowToast(`Error starting analysis: ${error?.message || error}`, "error"); }
+    finally { setIsStartingAnalysis(false); }
+  };
+
+  const handleCompleteAnalysis = (parameter: ParameterDetail) => {
+    if (normalizedRole !== "analyst") return;
+    if (!["analysis started", "analysis revision started"].includes(normalizeStatus(parameter.status)) && !revisionStartedParams.has(parameter.id)) return;
+    setParameterForAnalysis(parameter);
+    setShowCompleteAnalysisDialog(true);
+  };
+
+  const handleConfirmCompleteAnalysis = async (comment: string) => {
+    if (!parameterForAnalysis) return;
+    setIsCompletingAnalysis(true);
+    try {
+      const previous = normalizeStatus(parameterForAnalysis.status);
+      const wasRevision = previous === "analysis revision started" || previous === "analysis revision" || revisionStartedParams.has(parameterForAnalysis.id);
+      const completionDate = new Date().toISOString();
+      const updated = { ...parameterForAnalysis, status: "Analysis Completed", analysisCompletionDate: completionDate, ...(wasRevision ? { revisionCompletedDate: completionDate } : {}), remarksByAnalyst: comment || null };
+      const response = await worksheetService.updateParameter(parameterForAnalysis.id, updated);
+      if (!response?.parameterId) throw new Error("Failed to complete analysis");
+      setAddedParameters(prev => prev.map(p => p.id === updated.id ? updated : p));
+      setParameterStatusPerParam(prev => ({ ...prev, [updated.id]: "Analysis Completed" }));
+      setRemarksByAnalystPerParam(prev => ({ ...prev, [updated.id]: comment || "" }));
+      setPreparationLockedPerParam(prev => ({ ...prev, [updated.id]: true }));
+      if (wasRevision) setRevisionStartedParams(prev => { const n = new Set(prev); n.delete(updated.id); return n; });
+      await worksheetService.insertWorksheetLog({ worksheetId: displayWorksheetId, parameterId: updated.id, action: wasRevision ? "Analysis Completed After Revision" : "Analysis Completed", remarks: comment || (wasRevision ? "Analysis completed after revision" : "Analysis completed"), employeeId: getEmployeeId(), role: getRole() });
+      showWorkflowToast(wasRevision ? "Revision completed successfully! Resubmitted to Reviewer." : "Analysis completed successfully! Submitted for Reviewer approval.");
+      setShowCompleteAnalysisDialog(false); setParameterForAnalysis(null);
+    } catch (error: any) { showWorkflowToast(`Error completing analysis: ${error?.message || error}`, "error"); }
+    finally { setIsCompletingAnalysis(false); }
+  };
+
+  const handleApprove = (parameter: ParameterDetail) => { if (normalizedRole !== "reviewer") return; setParameterForApproval(parameter); setShowApproveDialog(true); };
+  const handleRequestRevision = (parameter: ParameterDetail) => { if (normalizedRole !== "reviewer") return; setParameterForApproval(parameter); setShowRevisionDialog(true); };
+  const handleQARequestRevision = (parameter: ParameterDetail) => { if (normalizedRole !== "qa") return; setParameterForApproval(parameter); setShowQARevisionDialog(true); };
+
+  const handleConfirmApprove = async (remarks: string) => {
+    if (!parameterForApproval) return;
+    setIsApproving(true);
+    try {
+      const updated = { ...parameterForApproval, status: "Approved", approvedByReviewer: getEmployeeId(), approvedAtReviewer: new Date().toISOString(), remarksByReviewer: remarks || null };
+      const response = await worksheetService.updateParameter(parameterForApproval.id, updated);
+      if (!response?.parameterId) throw new Error("Failed to approve parameter");
+      setAddedParameters(prev => prev.map(p => p.id === updated.id ? updated : p));
+      setParameterStatusPerParam(prev => ({ ...prev, [updated.id]: "Approved" }));
+      setRemarksByReviewerPerParam(prev => ({ ...prev, [updated.id]: remarks || null }));
+      setPreparationLockedPerParam(prev => ({ ...prev, [updated.id]: true }));
+      await worksheetService.insertWorksheetLog({ worksheetId: displayWorksheetId, parameterId: updated.id, action: "Parameter Approved", remarks: remarks || "Parameter approved by Reviewer", employeeId: getEmployeeId(), role: getRole() });
+      showWorkflowToast("Parameter approved successfully!");
+      setShowApproveDialog(false); setParameterForApproval(null);
+    } catch (error: any) { showWorkflowToast(`Error approving parameter: ${error?.message || error}`, "error"); }
+    finally { setIsApproving(false); }
+  };
+
+  const handleConfirmRevision = async (comments: string) => {
+    if (!parameterForApproval) return;
+    setIsRequestingRevision(true);
+    try {
+      const updated = { ...parameterForApproval, status: "Analysis Revision", revisionComments: comments, remarksByReviewer: comments, analysisCompletionDate: new Date().toISOString() };
+      const response = await worksheetService.updateParameter(parameterForApproval.id, updated);
+      if (!response?.parameterId) throw new Error("Failed to request revision");
+      setAddedParameters(prev => prev.map(p => p.id === updated.id ? updated : p));
+      setParameterStatusPerParam(prev => ({ ...prev, [updated.id]: "Analysis Revision" }));
+      setRemarksByReviewerPerParam(prev => ({ ...prev, [updated.id]: comments }));
+      setPreparationLockedPerParam(prev => ({ ...prev, [updated.id]: true }));
+      await worksheetService.insertWorksheetLog({ worksheetId: displayWorksheetId, parameterId: updated.id, action: "Analysis Revision Requested", remarks: comments || "Revision requested by Reviewer", employeeId: getEmployeeId(), role: getRole() });
+      showWorkflowToast("Revision requested successfully!");
+      setShowRevisionDialog(false); setParameterForApproval(null);
+    } catch (error: any) { showWorkflowToast(`Error requesting revision: ${error?.message || error}`, "error"); }
+    finally { setIsRequestingRevision(false); }
+  };
+
+  const handleConfirmQARevision = async (comments: string) => {
+    if (!parameterForApproval) return;
+    setIsQARequestingRevision(true);
+    try {
+      const updated = { ...parameterForApproval, status: "Analysis Revision", remarksByQA: comments || null };
+      const response = await worksheetService.updateParameter(parameterForApproval.id, updated);
+      if (!response?.parameterId) throw new Error("Failed to request QA revision");
+      setAddedParameters(prev => prev.map(p => p.id === updated.id ? updated : p));
+      setParameterStatusPerParam(prev => ({ ...prev, [updated.id]: "Analysis Revision" }));
+      setRemarksQAPerParam(prev => ({ ...prev, [updated.id]: comments || null }));
+      setPreparationLockedPerParam(prev => ({ ...prev, [updated.id]: true }));
+      await worksheetService.insertWorksheetLog({ worksheetId: displayWorksheetId, parameterId: updated.id, action: "QA Revision Requested", remarks: comments || "Revision requested by QA", employeeId: getEmployeeId(), role: getRole() });
+      showWorkflowToast("Revision requested by QA successfully!");
+      setShowQARevisionDialog(false); setParameterForApproval(null);
+    } catch (error: any) { showWorkflowToast(`Error requesting QA revision: ${error?.message || error}`, "error"); }
+    finally { setIsQARequestingRevision(false); }
+  };
+
+  const buildWorkflowPayload = (parameters: ParameterDetail[], status: string) => ({
+    role: getRole(), worksheetId: displayWorksheetId,
+    registrationInfo: {
+      registrationNo: registrationNo,
+      sampleName,
+      sampleCode: String((sample as any)?.sampleCode ?? ""),
+      sampleQuantity: Number((sample as any)?.sampleQuantity ?? 0),
+      natureOfSample: String((sample as any)?.natureOfSample ?? ""),
+      numberOfParameters: parameters.length,
+      dueDate: dueDate === "—" ? undefined : dueDate,
+      lab: displayLab,
+    },
+    documentInfo: { status },
+    parameters,
+  });
+
+  const openSubmitForAnalysis = () => {
+    if (normalizedRole !== "reviewer" || !showSubmitForAnalysis) return;
+    setShowSubmitDialog(true);
+  };
+
+  const openSubmitForQA = () => {
+    if (normalizedRole !== "reviewer" || !showSubmitForQA) return;
+    setShowSubmitForQADialog(true);
+  };
+
+  const openApproveWorksheet = () => {
+    if (normalizedRole !== "qa" || !showApproveWorksheet) return;
+    setShowApproveWorksheetDialog(true);
+  };
+
+  const handleSubmitForAnalysis = async () => {
+    if (normalizedRole !== "reviewer") return;
+    const created = addedParameters.filter(p => normalizeStatus(p.status) === "created");
+    if (!created.length) { showWorkflowToast("No parameters with 'created' status to submit", "error"); return; }
+    setIsSubmitting(true);
+    try {
+      if (normalizedWorksheetStatus === "draft") {
+        // Save current V2 data first so LOD/preparation changes are not lost.
+        await handleSaveDraft();
+        const refreshed = await worksheetService.getById(displayWorksheetId, { employeeId: getEmployeeId(), role: getRole() });
+        const sourceParams = ((refreshed?.parameters ?? []) as ParameterDetail[]);
+        const merged = sourceParams.map((p: any) => created.some(c => c.id === p.id) ? { ...p, status: "Analysis Pending" } : p);
+        const response = await worksheetService.update(displayWorksheetId, buildWorkflowPayload(merged, "Submitted For Analysis"));
+        if (!response?.worksheetId) throw new Error("Failed to submit worksheet for analysis");
+        setWorksheet(prev => prev ? { ...prev, sample: { ...prev.sample, status: "Submitted For Analysis" } } : prev);
+      } else {
+        for (const parameter of created) {
+          const response = await worksheetService.updateParameter(parameter.id, { ...parameter, status: "Analysis Pending" });
+          if (!response?.parameterId) throw new Error(`Failed to update parameter ${parameter.parameterName}`);
+        }
+      }
+      setAddedParameters(prev => prev.map(p => created.some(c => c.id === p.id) ? { ...p, status: "Analysis Pending" } : p));
+      setParameterStatusPerParam(prev => { const n={...prev}; created.forEach(p=>n[p.id]="Analysis Pending"); return n; });
+      setPreparationLockedPerParam(prev => { const n={...prev}; created.forEach(p=>n[p.id]=true); return n; });
+      await worksheetService.insertWorksheetLog({ worksheetId: displayWorksheetId, action: "Submitted For Analysis", remarks: "Worksheet submitted for analysis", employeeId: getEmployeeId(), role: getRole() });
+      showWorkflowToast("Worksheet submitted for analysis successfully!");
+      setShowSubmitDialog(false);
+    } catch (error: any) { showWorkflowToast(`Failed to submit: ${error?.message || error}`, "error"); }
+    finally { setIsSubmitting(false); }
+  };
+
+  const handleSubmitForQA = async () => {
+    if (normalizedRole !== "reviewer" || !areAllParametersApproved) return;
+    setIsSubmittingForQA(true);
+    try {
+      const response = await worksheetService.update(displayWorksheetId, buildWorkflowPayload(addedParameters, "Submitted For QA Review"));
+      if (!response?.worksheetId) throw new Error("Failed to submit worksheet for QA Review");
+      const now = new Date().toISOString();
+      setWorksheet(prev => prev ? { ...prev, sample: { ...prev.sample, status: "Submitted For QA Review", submittedQaBy: getEmployeeId(), submittedQaAt: now } } : prev);
+      await worksheetService.insertWorksheetLog({ worksheetId: displayWorksheetId, action: "Submitted For QA Review", remarks: "Worksheet submitted for QA review", employeeId: getEmployeeId(), role: getRole() });
+      showWorkflowToast("Worksheet submitted for QA Review successfully!"); setShowSubmitForQADialog(false);
+    } catch (error: any) { showWorkflowToast(`Error: ${error?.message || error}`, "error"); }
+    finally { setIsSubmittingForQA(false); }
+  };
+
+  const handleApproveWorksheet = async (approvalDateTime?: string) => {
+    if (normalizedRole !== "qa" || normalizedWorksheetStatus !== "submitted for qa review" || !areAllParametersApproved) return;
+    setIsApprovingWorksheet(true);
+    try {
+      const now = approvalDateTime ? new Date(approvalDateTime).toISOString() : new Date().toISOString();
+      const approvedParams = addedParameters.map(p => ({ ...p, status: "Approved", approvedByQA: getEmployeeId(), approvedAtQA: now }));
+      const response = await worksheetService.update(displayWorksheetId, { ...buildWorkflowPayload(approvedParams, "Approved"), documentInfo: { status: "Approved", approvedAt: now } });
+      if (!response?.worksheetId) throw new Error("Failed to approve worksheet");
+      setAddedParameters(approvedParams); setParameterStatusPerParam(Object.fromEntries(approvedParams.map(p=>[p.id,"Approved"])));
+      setPreparationLockedPerParam(Object.fromEntries(approvedParams.map(p=>[p.id,true])));
+      setWorksheet(prev => prev ? { ...prev, sample: { ...prev.sample, status: "Approved", approvedBy: getEmployeeId(), approvedAt: now } } : prev);
+      await worksheetService.insertWorksheetLog({ worksheetId: displayWorksheetId, action: "Worksheet Approved by QA", remarks: "Worksheet fully approved by QA", employeeId: getEmployeeId(), role: getRole() });
+      showWorkflowToast("Worksheet approved by QA successfully! All parameters are now finalized."); setShowApproveWorksheetDialog(false);
+    } catch (error: any) { showWorkflowToast(`Error approving worksheet: ${error?.message || error}`, "error"); }
+    finally { setIsApprovingWorksheet(false); }
+  };
+
+  const handlePrintReport = () => {
+    if (normalizedWorksheetStatus !== "approved") return;
+    const printHandler = (window as any).__foodWorksheetPrintReport;
+    if (typeof printHandler === "function") { printHandler(worksheet, addedParameters); return; }
+    window.print();
+  };
+
+  // ============================================================
   // SHELL
   // ============================================================
 
@@ -1897,7 +2249,7 @@ export default function WorksheetDetails({
     addedParameters.length > 0 &&
     addedParameters.every(
       (parameter) =>
-        normalizeStatus(parameter.status) === "approved"
+        normalizeStatus(parameterStatusPerParam[parameter.id] ?? parameter.status) === "approved"
     );
 
   // Save Draft remains available until the worksheet is finally
@@ -1948,61 +2300,12 @@ export default function WorksheetDetails({
 
   // ============================================================
   // ACTION STATE
-  //
-  // The actual persistence/workflow implementations will be
-  // connected to the V2 workflow layer later.
-  //
-  // For this migration stage we deliberately do NOT make fake
-  // API calls. The buttons and their correct visibility are
-  // implemented now.
   // ============================================================
-
   const isSaving = isSavingDraft;
-  const [saveSuccess, setSaveSuccess] = useState(false);
-
-  useEffect(() => {
-    if (!draftToast) return;
-
-    const timer = window.setTimeout(() => {
-      setDraftToast(null);
-      setSaveSuccess(false);
-    }, saveSuccess ? 3000 : 4000);
-
-    return () => window.clearTimeout(timer);
-  }, [draftToast, saveSuccess]);
-
-  const [isSubmitting] = useState(false);
-  const [isSubmittingForQA] = useState(false);
-  const [isApprovingWorksheet] = useState(false);
-
-  const handleSubmitForAnalysis = () => {
-    console.log(
-      "Submit for Analysis requested:",
-      displayWorksheetId
-    );
-  };
-
-  const handleSubmitForQA = () => {
-    console.log(
-      "Submit for QA Review requested:",
-      displayWorksheetId
-    );
-  };
-
-  const handleApproveWorksheet = () => {
-    console.log(
-      "Approve Worksheet requested:",
-      displayWorksheetId
-    );
-  };
-
-  const handlePrintReport = () => {
-    console.log(
-      "Print Report requested:",
-      displayWorksheetId
-    );
-  };
-
+  const saveSuccessState = saveSuccess;
+  const showSubmitForAnalysisButton = showSubmitForAnalysis;
+  const showSubmitForQAButton = showSubmitForQA;
+  const showApproveWorksheetButton = showApproveWorksheet;
   const shellProps = {
     worksheetId: displayWorksheetId,
     status: worksheetStatus,
@@ -2014,20 +2317,20 @@ export default function WorksheetDetails({
     onSaveDraft: handleSaveDraft,
 
     isSaving,
-    saveSuccess,
+    saveSuccess: saveSuccessState,
     isSubmitting,
     isSubmittingForQA,
     isApprovingWorksheet,
 
     showSaveDraft,
-    showSubmitForAnalysis,
-    showSubmitForQA,
-    showApproveWorksheet,
+    showSubmitForAnalysis: showSubmitForAnalysisButton,
+    showSubmitForQA: showSubmitForQAButton,
+    showApproveWorksheet: showApproveWorksheetButton,
     showPrintReport,
 
-    onSubmitForAnalysis: handleSubmitForAnalysis,
-    onSubmitForQA: handleSubmitForQA,
-    onApproveWorksheet: handleApproveWorksheet,
+    onSubmitForAnalysis: openSubmitForAnalysis,
+    onSubmitForQA: openSubmitForQA,
+    onApproveWorksheet: openApproveWorksheet,
     onPrintReport: handlePrintReport,
   };
 
@@ -2154,6 +2457,7 @@ export default function WorksheetDetails({
             pb-10
             pt-7
             shadow-[0_4px_16px_rgba(15,23,42,0.20)]
+            relative
             md:px-8
           "
         >
@@ -2242,8 +2546,63 @@ export default function WorksheetDetails({
           )}
 
 
+
           {selectedParameter && (
             <>
+            <AnalysisLockSection
+              status={selectedParameterStatus}
+              role={localStorage.getItem("Role") ?? ""}
+              worksheetStatus={worksheetStatus}
+              canUnlock={normalizedRole === "reviewer"}
+              canDelete={normalizedRole === "reviewer"}
+              onUnlock={() => handleInitiateUnlock(selectedParameter)}
+              onDelete={() => undefined}
+              onStartAnalysis={
+                normalizedRole === "analyst" &&
+                ["analysis pending"].includes(selectedParameterStatus)
+                  ? () => handleStartAnalysis(selectedParameter)
+                  : undefined
+              }
+              onCompleteAnalysis={
+                normalizedRole === "analyst" &&
+                (["analysis started", "analysis revision started"].includes(selectedParameterStatus) || revisionStartedParams.has(selectedParameter.id))
+                  ? () => handleCompleteAnalysis(selectedParameter)
+                  : undefined
+              }
+              onStartRevision={
+                normalizedRole === "analyst" &&
+                selectedParameterStatus === "analysis revision"
+                  ? () => handleStartRevision(selectedParameter)
+                  : undefined
+              }
+              onApprove={
+                normalizedRole === "reviewer" &&
+                selectedParameterStatus === "analysis completed"
+                  ? () => handleApprove(selectedParameter)
+                  : undefined
+              }
+              // Reviewer: Request Revision after analysis is completed.
+              // QA: Return for Revision after the Reviewer has approved the
+              // parameter and the worksheet is awaiting QA validation.
+              // The same QA action is intentionally available in BOTH the
+              // full status section and the compact bottom section.
+              onRequestRevision={
+                normalizedRole === "reviewer" && selectedParameterStatus === "analysis completed"
+                  ? () => handleRequestRevision(selectedParameter)
+                  : normalizedRole === "qa" &&
+                    normalizedWorksheetStatus === "submitted for qa review" &&
+                    selectedParameterStatus === "approved"
+                  ? () => handleQARequestRevision(selectedParameter)
+                  : undefined
+              }
+              analystComment={remarksByAnalystPerParam[selectedParameter.id] ?? (selectedParameter as any).remarksByAnalyst ?? null}
+              reviewerComment={remarksByReviewerPerParam[selectedParameter.id] ?? (selectedParameter as any).remarksByReviewer ?? (selectedParameter as any).revisionComments ?? remarksQAPerParam[selectedParameter.id] ?? (selectedParameter as any).remarksByQA ?? null}
+              analysisStartDate={(selectedParameter as any).analysisStartDate ?? null}
+              analysisCompletionDate={(selectedParameter as any).analysisCompletionDate ?? null}
+              revisionStartDate={(selectedParameter as any).revisionStartDate ?? null}
+              approvedAtReviewer={(selectedParameter as any).approvedAtReviewer ?? null}
+            />
+
               <div className="mb-4 flex justify-end">
                 <button
                   type="button"
@@ -2728,7 +3087,7 @@ export default function WorksheetDetails({
                     stepName
                   )
                 }
-                isLocked={false}
+                isLocked={isPreparationLocked}
               />
 
               <FoodParameterFiles
@@ -2768,8 +3127,14 @@ export default function WorksheetDetails({
                     index
                   )
                 }
-                isLocked={false}
+                isLocked={isPreparationLocked}
               />
+            {normalizedRole === "analyst" && selectedParameterStatus === "analysis completed" && (
+              <div
+                className="absolute inset-0 z-50 bg-white/20 backdrop-blur-[0.5px] cursor-not-allowed"
+                aria-hidden="true"
+              />
+            )}
             </>
           )}
 
@@ -2783,6 +3148,38 @@ export default function WorksheetDetails({
             onSelectAnalyst={handleAnalystSelected}
             lab={displayLab}
           />
+
+          {selectedParameter && (
+            <AnalysisLockSection
+              status={selectedParameterStatus}
+              role={localStorage.getItem("Role") ?? ""}
+              worksheetStatus={worksheetStatus}
+              canUnlock={false}
+              canDelete={false}
+              onUnlock={() => undefined}
+              onDelete={() => undefined}
+              onStartAnalysis={normalizedRole === "analyst" && selectedParameterStatus === "analysis pending" ? () => handleStartAnalysis(selectedParameter) : undefined}
+              onCompleteAnalysis={normalizedRole === "analyst" && (selectedParameterStatus === "analysis started" || selectedParameterStatus === "analysis revision started" || revisionStartedParams.has(selectedParameter.id)) ? () => handleCompleteAnalysis(selectedParameter) : undefined}
+              onStartRevision={normalizedRole === "analyst" && selectedParameterStatus === "analysis revision" ? () => handleStartRevision(selectedParameter) : undefined}
+              onApprove={normalizedRole === "reviewer" && selectedParameterStatus === "analysis completed" ? () => handleApprove(selectedParameter) : undefined}
+              onRequestRevision={
+                normalizedRole === "reviewer" && selectedParameterStatus === "analysis completed"
+                  ? () => handleRequestRevision(selectedParameter)
+                  : normalizedRole === "qa" &&
+                    normalizedWorksheetStatus === "submitted for qa review" &&
+                    selectedParameterStatus === "approved"
+                  ? () => handleQARequestRevision(selectedParameter)
+                  : undefined
+              }
+              analystComment={remarksByAnalystPerParam[selectedParameter.id] ?? (selectedParameter as any).remarksByAnalyst ?? null}
+              reviewerComment={remarksByReviewerPerParam[selectedParameter.id] ?? (selectedParameter as any).remarksByReviewer ?? (selectedParameter as any).revisionComments ?? remarksQAPerParam[selectedParameter.id] ?? (selectedParameter as any).remarksByQA ?? null}
+              analysisStartDate={(selectedParameter as any).analysisStartDate ?? null}
+              analysisCompletionDate={(selectedParameter as any).analysisCompletionDate ?? null}
+              revisionStartDate={(selectedParameter as any).revisionStartDate ?? null}
+              approvedAtReviewer={(selectedParameter as any).approvedAtReviewer ?? null}
+              compact
+            />
+          )}
 
           {draftToast &&
             typeof document !== "undefined" &&
@@ -2865,6 +3262,139 @@ export default function WorksheetDetails({
 
         </div>
       </div>
+
+
+      {/* V1 workflow confirmation dialogs */}
+      <SubmitDialog
+        isOpen={showSubmitDialog}
+        isSubmitting={isSubmitting}
+        onClose={() => setShowSubmitDialog(false)}
+        onConfirm={handleSubmitForAnalysis}
+        createdParametersCount={addedParameters.filter(p => normalizeStatus(parameterStatusPerParam[p.id] ?? p.status ?? "created") === "created").length}
+      />
+
+      <WorkflowActionDialog
+        isOpen={showSubmitForQADialog}
+        busy={isSubmittingForQA}
+        title="Submit for QA Review"
+        subtitle="Review before submission"
+        confirmText="Submit for QA Review"
+        busyText="Submitting..."
+        warning="All Reviewer-approved parameters will be submitted to QA for final validation."
+        onClose={() => { if (!isSubmittingForQA) setShowSubmitForQADialog(false); }}
+        onConfirm={handleSubmitForQA}
+      />
+
+      <WorkflowActionDialog
+        isOpen={showStartAnalysisDialog}
+        busy={isStartingAnalysis}
+        title="Start Analysis"
+        subtitle="Begin analyst processing"
+        parameterName={parameterForAnalysis?.parameterName ?? ""}
+        parameterCode={parameterForAnalysis?.paraCode ?? ""}
+        confirmText="Start Analysis"
+        busyText="Starting..."
+        warning="The parameter is protected while analysis is in progress."
+        onClose={() => { if (!isStartingAnalysis) { setShowStartAnalysisDialog(false); setParameterForAnalysis(null); } }}
+        onConfirm={() => handleConfirmStartAnalysis()}
+      />
+
+      {showCompleteAnalysisDialog && parameterForAnalysis && (
+        <CompleteAnalysisDialog
+          isOpen={showCompleteAnalysisDialog}
+          isCompleting={isCompletingAnalysis}
+          parameterName={parameterForAnalysis.parameterName ?? ""}
+          parameterCode={parameterForAnalysis.paraCode ?? ""}
+          onClose={() => {
+            if (isCompletingAnalysis) return;
+            setShowCompleteAnalysisDialog(false);
+            setParameterForAnalysis(null);
+          }}
+          onConfirm={handleConfirmCompleteAnalysis}
+        />
+      )}
+
+      <WorkflowActionDialog
+        isOpen={showApproveDialog}
+        busy={isApproving}
+        title="Approve Parameter"
+        subtitle="Finalize reviewer validation"
+        parameterName={parameterForApproval?.parameterName ?? ""}
+        parameterCode={parameterForApproval?.paraCode ?? ""}
+        confirmText="Approve Parameter"
+        busyText="Approving..."
+        commentLabel="Reviewer Remarks (optional)"
+        commentPlaceholder="Add reviewer remarks."
+        onClose={() => { if (!isApproving) { setShowApproveDialog(false); setParameterForApproval(null); } }}
+        onConfirm={handleConfirmApprove}
+      />
+
+      <WorkflowActionDialog
+        isOpen={showRevisionDialog}
+        busy={isRequestingRevision}
+        title="Request Revision"
+        subtitle="Send the parameter back to the analyst"
+        parameterName={parameterForApproval?.parameterName ?? ""}
+        parameterCode={parameterForApproval?.paraCode ?? ""}
+        confirmText="Request Revision"
+        busyText="Requesting..."
+        commentLabel="Revision Comments"
+        commentPlaceholder="Explain the changes required."
+        warning="The parameter remains locked until the analyst starts the revision."
+        onClose={() => { if (!isRequestingRevision) { setShowRevisionDialog(false); setParameterForApproval(null); } }}
+        onConfirm={handleConfirmRevision}
+      />
+
+      <WorkflowActionDialog
+        isOpen={showQARevisionDialog}
+        busy={isQARequestingRevision}
+        title="Request Revision"
+        subtitle="Return the parameter to the analyst"
+        parameterName={parameterForApproval?.parameterName ?? ""}
+        parameterCode={parameterForApproval?.paraCode ?? ""}
+        confirmText="Request Revision"
+        busyText="Requesting..."
+        commentLabel="QA Comments"
+        commentPlaceholder="Explain the changes required."
+        onClose={() => { if (!isQARequestingRevision) { setShowQARevisionDialog(false); setParameterForApproval(null); } }}
+        onConfirm={handleConfirmQARevision}
+      />
+
+      {showApproveWorksheetDialog && (
+        <ApproveWorksheetDialog
+          isOpen={showApproveWorksheetDialog}
+          isApproving={isApprovingWorksheet}
+          worksheetId={displayWorksheetId}
+          totalParameters={addedParameters.length}
+          onClose={() => {
+            if (isApprovingWorksheet) return;
+            setShowApproveWorksheetDialog(false);
+          }}
+          onConfirm={handleApproveWorksheet}
+        />
+      )}
+
+      {showUnlockDialog && workflowUnlockTarget && (
+        <WorkflowActionDialog
+          isOpen={showUnlockDialog}
+          busy={isUnlocking}
+          title="Unlock Parameter"
+          subtitle="Return parameter to draft"
+          parameterName={workflowUnlockTarget.parameterName ?? ""}
+          parameterCode={workflowUnlockTarget.paraCode ?? ""}
+          confirmText="Unlock"
+          busyText="Unlocking..."
+          warning="The worksheet will return to Draft so the parameter can be edited again."
+          onClose={() => { if (!isUnlocking) { setShowUnlockDialog(false); setWorkflowUnlockTarget(null); } }}
+          onConfirm={handleConfirmUnlock}
+        />
+      )}
+
+      {workflowToast && (
+        <div className={`fixed right-6 top-6 z-[100] rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-2xl ${workflowToastType === "success" ? "bg-emerald-700" : "bg-red-700"}`}>
+          {workflowToast}
+        </div>
+      )}
     </WorksheetShell>
   );
 }
