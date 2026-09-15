@@ -1,8 +1,11 @@
 /**
  * Metal Laboratory — ICP-MS (FOOD) calculation model.
  *
- * The field names follow the existing worksheet/Excel terminology:
- * SW1 = Sample Weight, V1 = Volume Makeup, V2/V3 = dilution factors.
+ * The field names follow the worksheet/Excel terminology:
+ * SW1 = Sample Weight
+ * V1  = Volume Makeup
+ * V2  = Dilution Factor 1
+ * V3  = Dilution Factor 2
  */
 export interface CalculationIcpms {
   id: number;
@@ -10,19 +13,23 @@ export interface CalculationIcpms {
 
   selectedSamplePreparationLabel: string | null;
 
-  /** SW1 — Sample Weight, in grams. */
+  /** SW1 — Sample Weight. */
   sw1: number | string | null;
+  sw1Unit: string;
 
-  /** V1 — Volume Makeup, in ml. */
+  /** V1 — Volume Makeup. */
   v1: number | string | null;
+  v1Unit: string;
 
   /** V2 — Dilution Factor 1. */
   v2: number | string | null;
+  v2Unit: string;
 
   /** V3 — Dilution Factor 2. */
   v3: number | string | null;
+  v3Unit: string;
 
-  /** Reserved fields retained for worksheet compatibility. */
+  /** Reserved worksheet compatibility fields. */
   v4: number | string | null;
   v5: number | string | null;
   v6: number | string | null;
@@ -37,6 +44,6 @@ export interface CalculationIcpms {
   acceptanceLimitMin: number | string;
   acceptanceLimitMax: number | string;
 
-  calculationResult: number | null;
+  calculationResult: number | string | null;
   calculationResultUnit: string;
 }

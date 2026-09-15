@@ -1,7 +1,8 @@
 import { forwardRef, useImperativeHandle, useState } from "react";
 import { BiTestTube } from "react-icons/bi";
-import { ChevronUp, Trash2 } from "lucide-react";
+import { ChevronUp, Trash2, Droplets } from "lucide-react";
 
+import CustomDropdown from "../../../../../shared/CustomDropdown";
 import type { PreparationModuleHandle } from "../../../../../core/preparation/ui/PreparationModuleHandle";
 import type { PreparationAttachedFile } from "../../../../../core/preparation-engine/components/FileAttachmentSection";
 import SamplePreparationSection from "../../../../../core/preparation-engine/components/SamplePreparationSection";
@@ -12,8 +13,14 @@ import UnlockPreparationDialog from "../../../../../core/preparation-engine/comp
 import PreparationToast from "../../../../../core/preparation-engine/components/PreparationToast";
 
 import type { CalculationIcpms } from "../models/CalculationIcpms";
-import type { SamplePreparationIcpms, SamplePreparationIcpmsStep } from "../models/SamplePreparationIcpms";
-import type { IcpmsModuleData, IcpmsModuleDraft } from "../models/index";
+import type {
+  SamplePreparationIcpms,
+  SamplePreparationIcpmsStep,
+} from "../models/SamplePreparationIcpms";
+import type {
+  IcpmsModuleData,
+  IcpmsModuleDraft,
+} from "../models/index";
 import {
   createCalculationIcpms,
   createSamplePreparationIcpms,
@@ -38,9 +45,12 @@ export interface IcpmsPreparationModuleProps {
 const parseSteps = (value: unknown): SamplePreparationIcpmsStep[] => {
   if (Array.isArray(value)) return value as SamplePreparationIcpmsStep[];
   if (typeof value !== "string") return [];
+
   try {
     const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? (parsed as SamplePreparationIcpmsStep[]) : [];
+    return Array.isArray(parsed)
+      ? (parsed as SamplePreparationIcpmsStep[])
+      : [];
   } catch {
     return [];
   }
@@ -52,6 +62,107 @@ const normalizeCompletedAt = (value: unknown): string | null => {
   return Number.isNaN(date.getTime()) ? value : date.toISOString();
 };
 
+const getUnitOptions = (name: string): string[] => {
+  if (
+    name === "Instrument Concentration (Sample)" ||
+    name === "Instrument Concentration (Blank)"
+  ) {
+    return ["ppb", "ppm"];
+  }
+
+  if (name === "Sample Weight (SW1)") {
+    return ["g", "mg", "kg"];
+  }
+
+  return ["ml", "L", "µl"];
+};
+
+const getDefaultUnit = (name: string): string => {
+  if (
+    name === "Instrument Concentration (Sample)" ||
+    name === "Instrument Concentration (Blank)"
+  ) {
+    return "ppb";
+  }
+
+  if (name === "Sample Weight (SW1)") return "g";
+  return "ml";
+};
+
+/**
+ * ICP-MS preparation deliberately uses the same visual pattern as LOD.
+ *
+ * Layout:
+ *   1 — full row
+ *   2 — full row
+ *   3 — full row
+ *   4 — full row
+ *   5 — full row
+ *   6 — full row
+ *
+ * Only the business labels/units differ.
+ */
+const IcpmsStep = ({
+  step,
+  stepNumber,
+  locked,
+  onChange,
+}: {
+  step: SamplePreparationIcpmsStep;
+  stepNumber: number;
+  locked: boolean;
+  onChange: (field: keyof SamplePreparationIcpmsStep, value: string) => void;
+}) => {
+  const unit = step.unit1 || getDefaultUnit(step.name);
+  const unitOptions = getUnitOptions(step.name);
+
+  return (
+    <div className="relative rounded-xl border border-emerald-200/60 bg-white p-4 transition-all duration-200 hover:border-emerald-300">
+      <div className="flex items-start gap-3">
+        <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-700 to-slate-800 shadow-md">
+          <span className="text-xs font-bold text-white">{stepNumber}</span>
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="mb-3 flex items-center gap-2">
+            <div className="text-sm font-bold text-emerald-900">
+              {step.name}
+            </div>
+            <div className="h-px flex-1 bg-gradient-to-r from-slate-300 to-transparent" />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="font-medium text-gray-600">{step.name}</span>
+
+            <input
+              type="text"
+              inputMode="decimal"
+              value={step.value1 ?? ""}
+              disabled={locked}
+              placeholder="Enter value"
+              onChange={(event) => onChange("value1", event.target.value)}
+              className="w-[122px] rounded-lg border border-emerald-300 px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-400 disabled:bg-gray-100"
+            />
+
+            <div className="w-20">
+              <CustomDropdown
+                options={unitOptions.map((option) => ({
+                  value: option,
+                  label: option,
+                }))}
+                value={unit}
+                onChange={(value) => onChange("unit1", value)}
+                colorScheme="emerald"
+                disabled={locked}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const IcpmsSamplePreparationCard = ({
   preparation,
   disabled,
@@ -61,24 +172,24 @@ const IcpmsSamplePreparationCard = ({
   preparation: SamplePreparationIcpms;
   disabled: boolean;
   onRemove: () => void;
-  onChange: (stepIndex: number, field: keyof SamplePreparationIcpmsStep, value: string) => void;
-}) => {
-  const updateStep = (
+  onChange: (
     stepIndex: number,
     field: keyof SamplePreparationIcpmsStep,
     value: string,
-  ) => onChange(stepIndex, field, value);
-
+  ) => void;
+}) => {
   return (
-    <div className="relative group z-20">
+    <div className="group relative z-20">
       <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-emerald-700/20 to-slate-900/20 blur-xl" />
+
       <div className="relative mb-4 overflow-hidden rounded-lg border border-emerald-200 bg-white/95">
         <div className="relative rounded-t-lg bg-gradient-to-r from-emerald-700 via-emerald-800 to-slate-900">
           <div className="flex items-center justify-between px-4 py-3">
-            <div className="flex items-center gap-4">
+            <div className="flex flex-1 items-center gap-4">
               <div className="rounded-lg border border-white/30 bg-white/20 p-2">
-                <BiTestTube className="h-5 w-5 text-white" />
+                <Droplets className="h-5 w-5 text-white" />
               </div>
+
               <div>
                 <h4 className="text-sm font-semibold tracking-wide text-white">
                   {preparation.label}
@@ -89,18 +200,21 @@ const IcpmsSamplePreparationCard = ({
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={(event) => {
-                  const target = event.currentTarget.closest(".group")?.querySelector<HTMLElement>("[data-preparation-body]");
-                  target?.classList.toggle("hidden");
+                onClick={() => {
+                  const element = document.getElementById(
+                    `icpms-prep-${preparation.id}`,
+                  );
+                  if (element) element.classList.toggle("hidden");
                 }}
                 className="rounded-lg p-2 hover:bg-white/20"
                 aria-label={`Toggle ${preparation.label}`}
               >
                 <ChevronUp className="h-5 w-5 text-white" />
               </button>
+
               <button
                 type="button"
                 onClick={onRemove}
@@ -114,28 +228,20 @@ const IcpmsSamplePreparationCard = ({
           </div>
         </div>
 
-        <div data-preparation-body className="grid gap-3 bg-gradient-to-br from-emerald-50/50 to-slate-50/30 p-5 md:grid-cols-2 xl:grid-cols-3">
+        <div
+          id={`icpms-prep-${preparation.id}`}
+          className="space-y-3 bg-gradient-to-br from-emerald-50/50 to-slate-50/30 p-5"
+        >
           {preparation.steps.map((step, stepIndex) => (
-            <div key={`${preparation.id}-${stepIndex}`} className="rounded-lg border border-slate-200 bg-white p-3">
-              <div className="mb-2 text-xs font-semibold text-slate-600">
-                {step.name}
-              </div>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={step.value1 ?? ""}
-                  disabled={disabled}
-                  onChange={(event) => updateStep(stepIndex, "value1", event.target.value)}
-                  className="h-9 min-w-0 flex-1 rounded-lg border border-emerald-300 px-3 text-sm outline-none focus:border-emerald-500 disabled:bg-slate-100"
-                  placeholder="Enter value"
-                />
-                {step.unit1 && (
-                  <div className="flex h-9 min-w-[68px] items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-2 text-xs font-semibold text-emerald-800">
-                    {step.unit1}
-                  </div>
-                )}
-              </div>
-            </div>
+            <IcpmsStep
+              key={`${preparation.id}-${stepIndex}`}
+              step={step}
+              stepNumber={stepIndex + 1}
+              locked={disabled}
+              onChange={(field, value) =>
+                onChange(stepIndex, field, value)
+              }
+            />
           ))}
         </div>
       </div>
@@ -158,7 +264,9 @@ const IcpmsPreparationModule = forwardRef<
     onUnlockPreparation,
   } = props;
 
-  const [samplePreparations, setSamplePreparations] = useState<SamplePreparationIcpms[]>([]);
+  const [samplePreparations, setSamplePreparations] = useState<
+    SamplePreparationIcpms[]
+  >([]);
   const [files, setFiles] = useState<PreparationAttachedFile[]>([]);
   const [calculations, setCalculations] = useState<CalculationIcpms[]>([]);
   const [completed, setCompleted] = useState(false);
@@ -173,11 +281,15 @@ const IcpmsPreparationModule = forwardRef<
   }>({ visible: false, message: "", type: "success" });
 
   const preparationDataLocked = isLocked || completed;
-  const notify = (message: string, type: "success" | "error" | "info" = "success") =>
-    setToast({ visible: true, message, type });
+
+  const notify = (
+    message: string,
+    type: "success" | "error" | "info" = "success",
+  ) => setToast({ visible: true, message, type });
 
   const addPreparation = () => {
     if (preparationDataLocked) return;
+
     setSamplePreparations((current) => [
       ...current,
       createSamplePreparationIcpms(current.length),
@@ -189,6 +301,7 @@ const IcpmsPreparationModule = forwardRef<
     if (preparationDataLocked) return;
 
     const removedLabel = samplePreparations[index]?.label;
+
     setSamplePreparations((current) =>
       current
         .filter((_, currentIndex) => currentIndex !== index)
@@ -252,7 +365,10 @@ const IcpmsPreparationModule = forwardRef<
     const remaining = Math.max(0, 10 - files.length);
 
     for (const file of selected.slice(0, remaining)) {
-      if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+      if (
+        file.type !== "application/pdf" &&
+        !file.name.toLowerCase().endsWith(".pdf")
+      ) {
         notify(`${file.name} is not a PDF.`, "error");
         continue;
       }
@@ -268,7 +384,7 @@ const IcpmsPreparationModule = forwardRef<
         id: `${Date.now()}-${mapped.length}`,
         name: file.name,
         size: file.size,
-        type: file.type || "application/pdf",
+        type: file.type,
         fileDataBase64: base64,
       });
     }
@@ -277,29 +393,39 @@ const IcpmsPreparationModule = forwardRef<
   };
 
   const complete = () => {
-    if (isLocked || samplePreparations.length === 0) return;
+    if (isLocked || !samplePreparations.length) return;
+
     setCompleted(true);
     const now = new Date().toISOString();
     setCompletedAt(now);
     setShowComplete(false);
     onLockPreparation(parameterId);
-    notify("ICP-MS (FOOD) preparation marked as complete!");
+    notify("ICP-MS preparation marked as complete!");
   };
 
   const unlock = async () => {
     if (!canUnlockPreparation) return;
 
     setUnlocking(true);
+
     try {
       setCompleted(false);
       setCompletedAt(null);
       setCalculations([]);
       onUnlockPreparation(parameterId);
       setShowUnlock(false);
-      notify("ICP-MS (FOOD) preparation unlocked successfully.");
+      notify("ICP-MS preparation unlocked successfully.");
     } finally {
       setUnlocking(false);
     }
+  };
+
+  const updateCalculation = (updated: CalculationIcpms) => {
+    setCalculations((current) =>
+      current.map((calculation) =>
+        calculation.id === updated.id ? updated : calculation,
+      ),
+    );
   };
 
   useImperativeHandle(
@@ -353,14 +479,17 @@ const IcpmsPreparationModule = forwardRef<
                 if (!item || typeof item !== "object") return false;
                 const value = item as Record<string, unknown>;
                 return (
-                  String(value.preparationType ?? "").trim().toLowerCase() ===
-                    "icpms" &&
-                  String(value.preparationCategory ?? "sample").trim().toLowerCase() ===
-                    "sample"
+                  String(value.preparationType ?? "")
+                    .trim()
+                    .toLowerCase() === "icpms" &&
+                  String(value.preparationCategory ?? "sample")
+                    .trim()
+                    .toLowerCase() === "sample"
                 );
               })
               .map((item, index) => {
                 const value = item as Record<string, unknown>;
+
                 return restoreSamplePreparationIcpms(
                   {
                     ...value,
@@ -377,13 +506,15 @@ const IcpmsPreparationModule = forwardRef<
                 if (!item || typeof item !== "object") return false;
                 const value = item as Record<string, unknown>;
                 return (
-                  String(value.calculationType ?? "").trim().toLowerCase() ===
-                  "icpms"
+                  String(value.calculationType ?? "")
+                    .trim()
+                    .toLowerCase() === "icpms"
                 );
               })
               .map((item, index) => {
                 const value = item as Record<string, unknown>;
                 let data: unknown = value.data;
+
                 if (typeof data === "string") {
                   try {
                     data = JSON.parse(data);
@@ -391,6 +522,7 @@ const IcpmsPreparationModule = forwardRef<
                     data = {};
                   }
                 }
+
                 return restoreCalculationIcpms(data ?? value, index);
               })
           : [];
@@ -401,18 +533,22 @@ const IcpmsPreparationModule = forwardRef<
                 if (!item || typeof item !== "object") return false;
                 const value = item as Record<string, unknown>;
                 return (
-                  String(value.preparationType ?? "").trim().toLowerCase() ===
-                  "icpms"
+                  String(value.preparationType ?? "")
+                    .trim()
+                    .toLowerCase() === "icpms"
                 );
               })
               .map((item, index) => {
                 const value = item as Record<string, unknown>;
+
                 return {
                   id:
                     typeof value.id === "number"
                       ? value.id
                       : `${Date.now()}-${index}`,
-                  name: String(value.fileName ?? value.name ?? `ICP-MS-${index + 1}.pdf`),
+                  name: String(
+                    value.fileName ?? value.name ?? `ICP-MS-${index + 1}.pdf`,
+                  ),
                   type: "application/pdf",
                   fileDataBase64:
                     typeof value.fileDataBase64 === "string"
@@ -436,8 +572,9 @@ const IcpmsPreparationModule = forwardRef<
           Array.isArray(parameter.preparations)
             ? (parameter.preparations as CompletedPreparationRecord[]).find(
                 (item) =>
-                  String(item?.preparationType ?? "").trim().toLowerCase() ===
-                    "icpms" &&
+                  String(item?.preparationType ?? "")
+                    .trim()
+                    .toLowerCase() === "icpms" &&
                   Boolean(item?.isPreparationCompleted),
               ) ?? null
             : null;
@@ -457,14 +594,6 @@ const IcpmsPreparationModule = forwardRef<
       calculations,
       completed,
       completedAt,
-      parameterId,
-      isLocked,
-      canUnlockPreparation,
-      canEditCalculations,
-      parameterName,
-      parameterCode,
-      onLockPreparation,
-      onUnlockPreparation,
     ],
   );
 
@@ -476,6 +605,7 @@ const IcpmsPreparationModule = forwardRef<
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-700 to-emerald-900 shadow-lg">
               <BiTestTube className="h-5 w-5 text-white" />
             </div>
+
             <div>
               <h2 className="text-2xl font-bold text-emerald-900">
                 ICP-MS (FOOD) Analysis
@@ -485,6 +615,7 @@ const IcpmsPreparationModule = forwardRef<
               </p>
             </div>
           </div>
+
           <div className="rounded-full bg-emerald-100 px-5 py-2 text-sm font-semibold text-emerald-700">
             {samplePreparations.length} Preparations
           </div>
@@ -496,7 +627,7 @@ const IcpmsPreparationModule = forwardRef<
         preparations={samplePreparations}
         isLocked={preparationDataLocked}
         onAddPreparation={addPreparation}
-        onRemovePreparation={() => undefined}
+        onRemovePreparation={(_, index) => removePreparation(index)}
         renderPreparation={(preparation, index) => (
           <IcpmsSamplePreparationCard
             preparation={preparation}
@@ -519,7 +650,9 @@ const IcpmsPreparationModule = forwardRef<
               maxFiles={10}
               onAttachFiles={addFiles}
               onRemoveFile={(_, index) =>
-                setFiles((current) => current.filter((__, fileIndex) => fileIndex !== index))
+                setFiles((current) =>
+                  current.filter((__, fileIndex) => fileIndex !== index),
+                )
               }
             />
           </div>
@@ -550,17 +683,14 @@ const IcpmsPreparationModule = forwardRef<
               }
               onRemove={(id) => {
                 if (!canEditCalculations) return;
+
                 setCalculations((current) =>
                   current.filter((calculation) => calculation.id !== id),
                 );
               }}
               onUpdate={(updated) => {
                 if (!canEditCalculations) return;
-                setCalculations((current) =>
-                  current.map((calculation) =>
-                    calculation.id === updated.id ? updated : calculation,
-                  ),
-                );
+                updateCalculation(updated);
               }}
             />
           )}
@@ -589,7 +719,9 @@ const IcpmsPreparationModule = forwardRef<
         visible={toast.visible}
         type={toast.type}
         message={toast.message}
-        onClose={() => setToast((current) => ({ ...current, visible: false }))}
+        onClose={() =>
+          setToast((current) => ({ ...current, visible: false }))
+        }
       />
     </div>
   );

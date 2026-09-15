@@ -1,4 +1,5 @@
 export type { CalculationIcpms } from "./CalculationIcpms";
+
 export type {
   SamplePreparationIcpms,
   SamplePreparationIcpmsStep,
@@ -12,8 +13,12 @@ export interface IcpmsFile {
   readonly fileDataBase64?: string | null;
 }
 
-/** State owned by the Metal ICP-MS module. Core wraps this in
- * PreparationDraft.modules["metal.icpms"]. */
+/**
+ * State owned by the Metal ICP-MS module.
+ *
+ * Core stores this as:
+ * PreparationDraft.modules["metal.icpms"]
+ */
 export interface IcpmsModuleData {
   samplePreparations: import("./SamplePreparationIcpms").SamplePreparationIcpms[];
   files: IcpmsFile[];
@@ -22,5 +27,9 @@ export interface IcpmsModuleData {
   completedAt: string | null;
 }
 
-/** Payload returned to Core by IcpmsPreparationModule.getDraft(). */
+/**
+ * Payload returned by IcpmsPreparationModule.getDraft().
+ *
+ * Core adds the outer activeGroups/modules envelope.
+ */
 export interface IcpmsModuleDraft extends IcpmsModuleData {}
