@@ -16,8 +16,7 @@ namespace RawDataWorkSheet.Repositories
 
         public async Task<IEnumerable<SampleDetails>> GetSampleDetailsByIdAsync(SampleDetailsRequest request)
         {
-            var query = @"
-    SELECT 
+            var query = @"SELECT 
         t1.TRN1REFNO                                                        AS RegistrationNo,
         t2.TRN2PRODALIAS                                                    AS SampleName,
         t2.TRN2PRODCD                                                       AS SampleCode,
@@ -45,25 +44,21 @@ namespace RawDataWorkSheet.Repositories
     WHERE 
         t1.TRN1PLANTCD = 'P001'
         AND t1.TRN1DATE BETWEEN '2025-04-01' AND '2028-03-31'
-        AND (@RegNo IS NULL OR t1.TRN1REFNO = @RegNo)
-
-        AND L.CODEDESC IN ('Food Lab','Quality Assurance')
-        --AND (
-
-            --@Lab IS NULL 
-            --OR @Lab LIKE '%Quality Assurance%'
-            -- OR EXISTS (
-            --    SELECT 1
-            --    FROM dbo.SplitStrings(
-            --        REPLACE(REPLACE(REPLACE(@Lab, '&', ' '), 'AND', ' '), 'Lab', ''),
-            --        ' '
-            --   ) S
-            --    WHERE LTRIM(RTRIM(S.[Value])) <> ''
-            --      AND L.CODEDESC LIKE '%' + LTRIM(RTRIM(S.[Value])) + '%'
-            --)
-        --)
-    ORDER BY t1.TRN1REFNO, t2.TRN2PRODALIAS;
-";
+        AND t1.TRN1REFNO = @RegNo
+        AND t2.TRN2REFNO like '%EFRAC/FDS/%'
+        AND (
+            @Lab LIKE '%Quality Assurance%'
+            OR EXISTS (
+                SELECT 1
+                FROM dbo.SplitStrings(
+                    REPLACE(REPLACE(REPLACE(@Lab, '&', ' '), 'AND', ' '), 'Lab', ''),
+                    ' '
+                ) S
+                WHERE LTRIM(RTRIM(S.[Value])) <> ''
+                  AND L.CODEDESC LIKE '%' + LTRIM(RTRIM(S.[Value])) + '%'
+            )
+        )
+    ORDER BY t1.TRN1REFNO, t2.TRN2PRODALIAS";
 
             using (var connection = new SqlConnection(_connectionString))
             {
