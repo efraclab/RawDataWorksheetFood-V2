@@ -6,6 +6,7 @@ export { metalPreparationRegistry } from "./preparation-engine/metalPreparationR
 export { metalPreparationModuleRegistry } from "./preparation-engine/metalPreparationModuleRegistry";
 
 export * from "./preparations/icpms";
+export * from "./preparations/icpmsIchQ3d";
 export * from "./preparations/icpmsWater";
 export * from "./preparations/icpoes";
 export * from "./preparations/icpoesWater";

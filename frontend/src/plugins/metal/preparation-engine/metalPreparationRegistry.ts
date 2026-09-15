@@ -1,6 +1,7 @@
 import type { PreparationHandler } from "../../../core/preparation/runtime/PreparationRuntime";
 import { aaswaterPreparationHandler } from "../preparations/aaswater/handler";
 import { icpmsPreparationHandler } from "../preparations/icpms/handler";
+import { icpmsIchQ3dPreparationHandler } from "../preparations/icpmsIchQ3d/handler";
 import { icpmsWaterPreparationHandler } from "../preparations/icpmsWater/handler";
 import { icpoesPreparationHandler } from "../preparations/icpoes/handler";
 import { icpoesWaterPreparationHandler } from "../preparations/icpoesWater/handler";
@@ -16,6 +17,7 @@ import { icpoesWaterPreparationHandler } from "../preparations/icpoesWater/handl
  */
 export const metalPreparationRegistry: readonly PreparationHandler[] = [
   icpmsPreparationHandler,
+  icpmsIchQ3dPreparationHandler,
   icpmsWaterPreparationHandler,
   icpoesPreparationHandler,
   icpoesWaterPreparationHandler,
