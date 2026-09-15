@@ -1,14 +1,7 @@
-import type { LabPlugin } from "../../core/plugin";
-
-const metalPlugin: LabPlugin = {
-  id: "metal",
-
-  name: "Metal",
-
-  description:
-    "Metal laboratory plugin.",
-
-  preparations: [],
-};
+import metalPlugin from "./plugin";
 
 export default metalPlugin;
+export { metalPlugin };
+export { metalPreparationRegistry } from "./preparation-engine/metalPreparationRegistry";
+export { metalPreparationModuleRegistry } from "./preparation-engine/metalPreparationModuleRegistry";
+export * from "./preparations/icpms";

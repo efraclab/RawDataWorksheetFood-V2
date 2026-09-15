@@ -102,7 +102,9 @@ const CreateWorksheet: React.FC<CreateWorksheetProps> = ({
           sampleCode: firstSample.sampleCode,
           numberOfParameters: 0,
           dueDate: firstSample.tatDate,
-          lab: firstSample.lab,
+          // The logged-in laboratory is the authoritative creation context.
+          // The same registration number may exist in another laboratory.
+          lab: department,
         },
         documentInfo: {
           preparedBy: employeeId,

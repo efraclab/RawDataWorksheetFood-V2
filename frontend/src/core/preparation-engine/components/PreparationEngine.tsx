@@ -97,22 +97,53 @@ const PreparationEngine = forwardRef<
 
         useEffect(() => {
             if (!worksheet || activeGroups.length > 0) return;
+
             const parameter = worksheet as any;
-            const hasLod = Array.isArray(parameter?.preparations) &&
-                parameter.preparations.some((x: any) =>
-                    String(x?.preparationType ?? "").trim().toLowerCase() === "lod" &&
-                    (
-                        !x?.preparationCategory ||
-                        String(x?.preparationCategory ?? "").trim().toLowerCase() === "sample"
-                    )
-                );
-            const hasLodCalculation = Array.isArray(parameter?.calculations) &&
-                parameter.calculations.some((x: any) => String(x?.calculationType ?? "").toLowerCase() === "lod");
-            if (hasLod || hasLodCalculation) {
-                setActiveGroups(["food.lod"]);
-                setExpandedGroups(["food.lod"]);
+            const preparations = Array.isArray(parameter?.preparations)
+                ? parameter.preparations
+                : [];
+            const calculations = Array.isArray(parameter?.calculations)
+                ? parameter.calculations
+                : [];
+
+            // Core does not know Food LOD, Metal ICP-MS, or any other
+            // laboratory-specific preparation. The lab registry declares
+            // which existing backend preparation/calculation types belong
+            // to each V2 module.
+            const matches = registry
+                .filter((definition) => {
+                    const preparationType =
+                        definition.preparationType?.trim().toLowerCase();
+                    const calculationType =
+                        definition.calculationType?.trim().toLowerCase();
+
+                    const hasPreparation = Boolean(
+                        preparationType &&
+                        preparations.some((item: any) =>
+                            String(item?.preparationType ?? "")
+                                .trim()
+                                .toLowerCase() === preparationType
+                        )
+                    );
+
+                    const hasCalculation = Boolean(
+                        calculationType &&
+                        calculations.some((item: any) =>
+                            String(item?.calculationType ?? "")
+                                .trim()
+                                .toLowerCase() === calculationType
+                        )
+                    );
+
+                    return hasPreparation || hasCalculation;
+                })
+                .map((definition) => definition.id);
+
+            if (matches.length > 0) {
+                setActiveGroups(matches);
+                setExpandedGroups(matches);
             }
-        }, [worksheet, activeGroups.length]);
+        }, [worksheet, activeGroups.length, registry]);
 
         const [showMenu, setShowMenu] =
             useState(false);

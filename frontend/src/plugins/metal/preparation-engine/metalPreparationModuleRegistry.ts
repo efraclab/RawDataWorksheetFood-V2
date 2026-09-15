@@ -1,5 +1,5 @@
 import type { PreparationModuleDefinition } from "../../../core/preparation/ui/PreparationModuleDefinition";
-import { foodPreparationRegistry } from "./foodPreparationRegistry";
+import { metalPreparationRegistry } from "./metalPreparationRegistry";
 
 type PersistenceMetadata = {
   preparationType?: string;
@@ -12,8 +12,12 @@ type UiMetadata = {
   color?: string;
 };
 
-export const foodPreparationModuleRegistry: readonly PreparationModuleDefinition[] =
-  foodPreparationRegistry
+/**
+ * Metal UI registry is derived from Metal's handler registry, exactly like
+ * Food LOD. Core receives only the generic module definitions.
+ */
+export const metalPreparationModuleRegistry: readonly PreparationModuleDefinition[] =
+  metalPreparationRegistry
     .map((handler) => {
       const ui = handler.definition.metadata?.ui as UiMetadata | undefined;
       const persistence = handler.definition.metadata?.persistence as

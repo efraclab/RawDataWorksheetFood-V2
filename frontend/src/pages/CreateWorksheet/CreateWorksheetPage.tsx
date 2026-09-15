@@ -17,7 +17,9 @@ export default function CreateWorksheetPage() {
       department={department}
       role={role}
       onWorksheetCreated={(worksheetId) => {
-        navigate(`/worksheet?worksheetId=${encodeURIComponent(worksheetId)}`);
+        navigate(
+          `/worksheet?worksheetId=${encodeURIComponent(worksheetId)}&lab=${encodeURIComponent(department)}`
+        );
       }}
       onCancel={() => {
         navigate("/dashboard");

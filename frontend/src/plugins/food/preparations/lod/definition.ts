@@ -15,5 +15,9 @@ export const lodPreparationDefinition: PreparationDefinition = {
             title: "Preparations for LOD",
             component: LodPreparationModule,
         },
+        persistence: {
+            preparationType: "lod",
+            calculationType: "lod",
+        },
     },
 };

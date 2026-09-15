@@ -44,12 +44,14 @@ import WorkflowActionDialog from "../../../plugins/food/components/dialogs/Workf
 import CompleteAnalysisDialog from "../../../plugins/food/components/dialogs/CompleteAnalysisDialog";
 import ApproveWorksheetDialog from "../../../plugins/food/components/dialogs/ApproveWorksheetDialog";
 import PreparationEngine, { type PreparationEngineHandle } from "../../preparation-engine/components/PreparationEngine";
+import type { PreparationModuleDefinition } from "../../preparation/ui/PreparationModuleDefinition";
 import { foodPreparationModuleRegistry } from "../../../plugins/food/preparation-engine/foodPreparationModuleRegistry";
 import FoodPrintReport from "../../../plugins/food/reporting/FoodPrintReport";
 
 interface WorksheetDetailsProps {
   worksheetId: string;
   lab?: string;
+  preparationRegistry?: readonly PreparationModuleDefinition[];
 }
 
 
@@ -140,6 +142,7 @@ function toFilePayload(
 export default function WorksheetDetails({
   worksheetId,
   lab,
+  preparationRegistry,
 }: WorksheetDetailsProps) {
   // ============================================================
   // STATE
@@ -174,6 +177,9 @@ export default function WorksheetDetails({
   const [showFoodPrintReport, setShowFoodPrintReport] = useState(false);
 
   const preparationEngineRef = useRef<PreparationEngineHandle | null>(null);
+
+  const activePreparationRegistry =
+    preparationRegistry ?? foodPreparationModuleRegistry;
 
   // ============================================================
   // V1 ANALYST ASSIGNMENT WORKFLOW
@@ -1739,67 +1745,97 @@ export default function WorksheetDetails({
       });
 
       // ============================================================
-      // CURRENT PREPARATION ENGINE MODULE
+      // CURRENT PREPARATION ENGINE MODULES
       // ============================================================
-      // LOD currently lives inside Core PreparationEngine. Collect its
-      // draft only for the expanded parameter and merge it with all the
-      // other parameter-local sections above.
+      // PreparationEngine is lab-neutral. Each lab module declares the
+      // existing backend preparation/calculation types it owns, so the
+      // worksheet layer can persist every module without hard-coding LOD,
+      // ICP-MS, or another preparation here.
       if (currentParameterId !== null && preparationEngineRef.current) {
         const preparationDraft = preparationEngineRef.current.collectDraft();
-        const modules = (preparationDraft?.modules ?? {}) as Record<string, any>;
+        const rawModules = (preparationDraft?.modules ?? {}) as Record<string, any>;
 
-        // PreparationEngine.collectDraft() stores the result of each
-        // module's getDraft(). The current LOD module itself returns a
-        // module-shaped draft, so support both shapes here:
-        //   modules["food.lod"] = { samplePreparations, ... }
-        // and
-        //   modules["food.lod"] = { activeGroups, modules: { "food.lod": {...} } }
-        const rawLod = modules["food.lod"] ?? modules["lod"];
-        const lod =
-          rawLod?.modules?.["food.lod"] ??
-          rawLod?.modules?.lod ??
-          rawLod;
+        const normalizeType = (value: unknown) =>
+          String(value ?? "").trim().toLowerCase();
 
-        if (lod && (
-          Array.isArray(lod.samplePreparations) ||
-          Array.isArray(lod.calculations) ||
-          Array.isArray(lod.files)
-        )) {
-          const mappedPreparations = (lod.samplePreparations ?? []).map(
-            (sample: any) => ({
-              label: sample?.label,
-              preparationCategory: "sample",
-              preparationType: "lod",
-              assignedStandardId: null,
-              steps: JSON.stringify(sample?.steps ?? []),
-              content: null,
-              isPreparationCompleted: Boolean(lod?.completed),
-              completedAt: lod?.completedAt ?? null,
-            })
-          );
+        for (const definition of activePreparationRegistry) {
+          const rawModule = rawModules[definition.id];
+          const isActive = preparationDraft.activeGroups.includes(definition.id);
 
-          const mappedFiles = (lod.files ?? [])
-            .map((file: any) =>
-              toFilePayload(file, {
-                id:
-                  typeof file?.id === "number"
-                    ? file.id
-                    : 0,
-                parameterId: currentParameterId,
-                preparationType: "lod",
-                label: "Preparation Files",
-                fileName: file?.name ?? file?.fileName ?? "",
-              })
-            )
-            .filter((file: PersistedFilePayload | null): file is PersistedFilePayload => file !== null);
+          const preparationType = normalizeType(definition.preparationType);
+          const calculationType = normalizeType(definition.calculationType);
 
-          const mappedCalculations = (lod.calculations ?? []).map(
-            (calculation: any) => ({
-              label: calculation?.label,
-              calculationType: "lod",
-              data: calculation,
-            })
-          );
+          if (!preparationType && !calculationType) continue;
+
+          // A removed preparation group must also remove its persisted data.
+          // This is important because the engine only returns currently active
+          // modules in collectDraft().
+          if (!isActive) {
+            parameters = parameters.map((parameter: any) => {
+              if (parameter.id !== currentParameterId) return parameter;
+
+              return {
+                ...parameter,
+                preparations: preparationType
+                  ? (Array.isArray(parameter.preparations)
+                      ? parameter.preparations.filter(
+                          (item: any) =>
+                            normalizeType(item?.preparationType) !== preparationType
+                        )
+                      : [])
+                  : parameter.preparations ?? [],
+                files: preparationType
+                  ? (Array.isArray(parameter.files)
+                      ? parameter.files.filter(
+                          (item: any) =>
+                            normalizeType(item?.preparationType) !== preparationType
+                        )
+                      : [])
+                  : parameter.files ?? [],
+                calculations: calculationType
+                  ? (Array.isArray(parameter.calculations)
+                      ? parameter.calculations.filter(
+                          (item: any) =>
+                            normalizeType(item?.calculationType) !== calculationType
+                        )
+                      : [])
+                  : parameter.calculations ?? [],
+              };
+            });
+            continue;
+          }
+
+          if (!rawModule) continue;
+
+          // Older module implementations returned an envelope:
+          // { activeGroups, modules: { [id]: data } }. New modules may
+          // return the data object directly. Support both during migration.
+          const moduleData =
+            rawModule?.modules?.[definition.id] ??
+            rawModule?.modules?.[definition.id.split(".").pop() ?? ""] ??
+            rawModule;
+
+          if (!moduleData || typeof moduleData !== "object") continue;
+
+          const samplePreparations = Array.isArray(moduleData.samplePreparations)
+            ? moduleData.samplePreparations
+            : [];
+          const moduleFiles = Array.isArray(moduleData.files)
+            ? moduleData.files
+            : [];
+          const moduleCalculations = Array.isArray(moduleData.calculations)
+            ? moduleData.calculations
+            : [];
+
+          if (
+            samplePreparations.length === 0 &&
+            moduleFiles.length === 0 &&
+            moduleCalculations.length === 0 &&
+            !moduleData.completed &&
+            !moduleData.completedAt
+          ) {
+            continue;
+          }
 
           parameters = parameters.map((parameter: any) => {
             if (parameter.id !== currentParameterId) return parameter;
@@ -1814,34 +1850,68 @@ export default function WorksheetDetails({
               ? parameter.calculations
               : [];
 
+            const mappedPreparations = samplePreparations.map((sample: any) => ({
+              label: sample?.label,
+              preparationCategory: "sample",
+              preparationType: preparationType || null,
+              assignedStandardId: null,
+              steps: JSON.stringify(sample?.steps ?? []),
+              content: null,
+              isPreparationCompleted: Boolean(moduleData.completed),
+              completedAt: moduleData.completedAt ?? null,
+            }));
+
+            const mappedFiles = moduleFiles
+              .map((file: any) =>
+                toFilePayload(file, {
+                  id: typeof file?.id === "number" ? file.id : 0,
+                  parameterId: currentParameterId,
+                  preparationType: preparationType || definition.id,
+                  label: `${definition.title} Files`,
+                  fileName: file?.name ?? file?.fileName ?? "",
+                })
+              )
+              .filter(
+                (file: PersistedFilePayload | null): file is PersistedFilePayload =>
+                  file !== null
+              );
+
+            const mappedCalculations = moduleCalculations.map((calculation: any) => ({
+              label: calculation?.label,
+              calculationType: calculationType || preparationType || definition.id,
+              data: calculation,
+            }));
+
+            const filteredPreparations = preparationType
+              ? existingPreparations.filter(
+                  (item: any) =>
+                    normalizeType(item?.preparationType) !== preparationType
+                )
+              : existingPreparations;
+
+            const filteredFiles = preparationType
+              ? existingFiles.filter(
+                  (item: any) =>
+                    normalizeType(item?.preparationType) !== preparationType
+                )
+              : existingFiles;
+
+            const filteredCalculations = calculationType
+              ? existingCalculations.filter(
+                  (item: any) =>
+                    normalizeType(item?.calculationType) !== calculationType
+                )
+              : existingCalculations;
+
             return {
               ...parameter,
-              preparations: [
-                ...existingPreparations.filter(
-                  (item: any) =>
-                    String(item?.preparationType ?? "").toLowerCase() !==
-                    "lod"
-                ),
-                ...mappedPreparations,
-              ],
-              calculations: [
-                ...existingCalculations.filter(
-                  (item: any) =>
-                    String(item?.calculationType ?? "").toLowerCase() !==
-                    "lod"
-                ),
-                ...mappedCalculations,
-              ],
-              files: [
-                ...existingFiles.filter(
-                  (item: any) =>
-                    String(item?.preparationType ?? "").toLowerCase() !==
-                    "lod"
-                ),
-                ...mappedFiles,
-              ],
+              preparations: [...filteredPreparations, ...mappedPreparations],
+              files: [...filteredFiles, ...mappedFiles],
+              calculations: [...filteredCalculations, ...mappedCalculations],
               preparationCompletedAt:
-                lod?.completedAt ?? parameter.preparationCompletedAt ?? null,
+                moduleData.completed
+                  ? moduleData.completedAt ?? parameter.preparationCompletedAt ?? null
+                  : null,
             };
           });
         }
@@ -3023,7 +3093,7 @@ export default function WorksheetDetails({
 
               <PreparationEngine
                 key={selectedParameter.id}
-                registry={foodPreparationModuleRegistry}
+                registry={activePreparationRegistry}
                 parameterId={selectedParameter.id}
                 parameterName={selectedParameter.parameterName}
                 parameterCode={selectedParameter.paraCode}
