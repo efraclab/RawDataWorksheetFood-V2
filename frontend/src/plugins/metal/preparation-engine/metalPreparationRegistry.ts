@@ -5,6 +5,7 @@ import { icpmsIchQ3dPreparationHandler } from "../preparations/icpmsIchQ3d/handl
 import { icpmsWaterPreparationHandler } from "../preparations/icpmsWater/handler";
 import { icpoesPreparationHandler } from "../preparations/icpoes/handler";
 import { icpoesWaterPreparationHandler } from "../preparations/icpoesWater/handler";
+import { orsPreparationHandler } from "../preparations/ors/handler";
 
 /**
  * All Metal laboratory preparation handlers.
@@ -21,5 +22,6 @@ export const metalPreparationRegistry: readonly PreparationHandler[] = [
   icpmsWaterPreparationHandler,
   icpoesPreparationHandler,
   icpoesWaterPreparationHandler,
+  orsPreparationHandler,
   aaswaterPreparationHandler,
 ];

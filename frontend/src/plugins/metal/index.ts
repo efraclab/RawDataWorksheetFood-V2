@@ -11,3 +11,4 @@ export * from "./preparations/icpmsWater";
 export * from "./preparations/icpoes";
 export * from "./preparations/icpoesWater";
 export * from "./preparations/aaswater";
+export * from "./preparations/ors";
