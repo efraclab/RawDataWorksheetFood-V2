@@ -1,5 +1,6 @@
 import type { PreparationHandler } from "../../../core/preparation/runtime/PreparationRuntime";
 import { aaswaterPreparationHandler } from "../preparations/aaswater/handler";
+import { anoferPreparationHandler } from "../preparations/anofer/handler";
 import { icpmsPreparationHandler } from "../preparations/icpms/handler";
 import { icpmsIchQ3dPreparationHandler } from "../preparations/icpmsIchQ3d/handler";
 import { icpmsWaterPreparationHandler } from "../preparations/icpmsWater/handler";
@@ -17,6 +18,7 @@ import { orsPreparationHandler } from "../preparations/ors/handler";
  * registry derives its dropdown entries from this list.
  */
 export const metalPreparationRegistry: readonly PreparationHandler[] = [
+  anoferPreparationHandler,
   icpmsPreparationHandler,
   icpmsIchQ3dPreparationHandler,
   icpmsWaterPreparationHandler,
