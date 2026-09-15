@@ -1,5 +1,6 @@
 import type { PreparationHandler } from "../../../core/preparation/runtime/PreparationRuntime";
 import { icpmsPreparationHandler } from "../preparations/icpms/handler";
+import { icpoesPreparationHandler } from "../preparations/icpoes/handler";
 
 /**
  * All Metal laboratory preparation handlers.
@@ -9,4 +10,5 @@ import { icpmsPreparationHandler } from "../preparations/icpms/handler";
  */
 export const metalPreparationRegistry: readonly PreparationHandler[] = [
   icpmsPreparationHandler,
+  icpoesPreparationHandler,
 ];
