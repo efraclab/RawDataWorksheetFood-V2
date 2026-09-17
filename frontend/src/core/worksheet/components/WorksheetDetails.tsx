@@ -1855,7 +1855,7 @@ export default function WorksheetDetails({
               preparationCategory: "sample",
               preparationType: preparationType || null,
               assignedStandardId: null,
-              steps: JSON.stringify(sample?.steps ?? []),
+              steps: JSON.stringify(sample?.stages ?? sample?.steps ?? []),
               content: null,
               isPreparationCompleted: Boolean(moduleData.completed),
               completedAt: moduleData.completedAt ?? null,
