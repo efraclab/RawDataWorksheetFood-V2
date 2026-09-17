@@ -14,3 +14,4 @@ export * from "./preparations/aaswater";
 export * from "./preparations/ors";
 export * from "./preparations/zptoShampoo";
 export * from "./preparations/talc";
+export * from "./preparations/meropenem";
