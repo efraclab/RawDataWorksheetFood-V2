@@ -7,8 +7,8 @@ import { icpmsWaterPreparationHandler } from "../preparations/icpmsWater/handler
 import { icpoesPreparationHandler } from "../preparations/icpoes/handler";
 import { icpoesWaterPreparationHandler } from "../preparations/icpoesWater/handler";
 import { orsPreparationHandler } from "../preparations/ors/handler";
-import { sodiumLactatePreparationHandler } from "../preparations/sodiumLactate/handler";
 import { zptoShampooPreparationHandler } from "../preparations/zptoShampoo/handler";
+import { talcPreparationHandler } from "../preparations/talc/handler";
 
 /**
  * All Metal laboratory preparation handlers.
@@ -29,5 +29,5 @@ export const metalPreparationRegistry: readonly PreparationHandler[] = [
   orsPreparationHandler,
   aaswaterPreparationHandler,
   zptoShampooPreparationHandler,
-  sodiumLactatePreparationHandler,
+  talcPreparationHandler,
 ];

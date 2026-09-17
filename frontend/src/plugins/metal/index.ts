@@ -13,5 +13,4 @@ export * from "./preparations/icpoesWater";
 export * from "./preparations/aaswater";
 export * from "./preparations/ors";
 export * from "./preparations/zptoShampoo";
-
-export * from "./preparations/sodiumLactate";
+export * from "./preparations/talc";

@@ -1,5 +1,5 @@
-import React,{useMemo,useState} from 'react';
-import {Calculator,ChevronDown,ChevronUp,Trash2} from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import CustomDropdown from '../../../../../shared/CustomDropdown';
 import type {CalculationSodiumLactate} from '../models/CalculationSodiumLactate';
 import type {SamplePreparationSodiumLactate} from '../models/SamplePreparationSodiumLactate';
