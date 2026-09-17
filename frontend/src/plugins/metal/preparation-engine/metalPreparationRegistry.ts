@@ -11,6 +11,7 @@ import { zptoShampooPreparationHandler } from "../preparations/zptoShampoo/handl
 import { talcPreparationHandler } from "../preparations/talc/handler";
 import { meropenemPreparationHandler } from "../preparations/meropenem/handler";
 import { sfgcPreparationHandler } from "../preparations/sfgc/handler";
+import { lithosun300PreparationHandler } from "../preparations/lithosun300/handler";
 
 /**
  * All Metal laboratory preparation handlers.
@@ -34,4 +35,5 @@ export const metalPreparationRegistry: readonly PreparationHandler[] = [
   talcPreparationHandler,
   meropenemPreparationHandler,
   sfgcPreparationHandler,
+  lithosun300PreparationHandler,
 ];
