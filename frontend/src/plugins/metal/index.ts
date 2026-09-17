@@ -15,3 +15,5 @@ export * from "./preparations/ors";
 export * from "./preparations/zptoShampoo";
 export * from "./preparations/talc";
 export * from "./preparations/meropenem";
+
+export * from "./preparations/sfgc";
