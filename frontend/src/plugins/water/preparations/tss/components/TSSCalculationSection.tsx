@@ -1,26 +1,24 @@
 import { Calculator } from "lucide-react";
-import type { CalculationMBAS } from "../models/CalculationMBAS";
-import type { SamplePreparationMBAS } from "../models/SamplePreparationMBAS";
-import CalculationDetailMBAS from "./CalculationDetailMBAS";
+import type { CalculationTSS } from "../models/CalculationTSS";
+import type { SamplePreparationTSS } from "../models/SamplePreparationTSS";
+import CalculationDetailTSS from "./CalculationDetailTSS";
 
 interface Props {
-  calculations: CalculationMBAS[];
-  samplePreparations: SamplePreparationMBAS[];
+  calculations: CalculationTSS[];
+  samplePreparations: SamplePreparationTSS[];
   canEditCalculations: boolean;
   onAdd: () => void;
   onRemove: (id: number) => void;
-  onUpdate: (calculation: CalculationMBAS) => void;
+  onUpdate: (calculation: CalculationTSS) => void;
 }
 
-export default function MBASCalculationSection({
+export default function TSSCalculationSection({
   calculations,
   samplePreparations,
-  canEditCalculations,
   onAdd,
   onRemove,
   onUpdate,
 }: Props) {
-  void canEditCalculations;
   return (
     <section className="mt-8 pb-10">
       <div className="mx-6 flex items-center gap-4 py-2">
@@ -38,7 +36,7 @@ export default function MBASCalculationSection({
         <div className="mb-6 flex items-center justify-between">
           <h3 className="flex items-center gap-3 text-lg font-bold text-emerald-900">
             <span className="h-6 w-1.5 rounded-full bg-gradient-to-b from-emerald-600 to-emerald-900" />
-            Surfactant-Methylene Blue (as MBAS) Calculation
+            Total Suspended Solids (TSS) Calculation
           </h3>
 
           <button
@@ -56,7 +54,7 @@ export default function MBASCalculationSection({
           <div className="rounded-xl border-2 border-dashed border-emerald-300 bg-gradient-to-br from-emerald-50 via-white to-emerald-50 py-12 text-center shadow-inner">
             <Calculator className="mx-auto h-10 w-10 text-emerald-400" />
             <p className="mb-1 mt-3 text-base font-semibold text-emerald-800">
-              No MBAS calculations added yet
+              No TSS calculations added yet
             </p>
             <p className="text-xs text-emerald-600/80">
               Click &quot;Add Calculation&quot; to begin
@@ -65,7 +63,7 @@ export default function MBASCalculationSection({
         ) : (
           <div className="space-y-6">
             {calculations.map((calculation) => (
-              <CalculationDetailMBAS
+              <CalculationDetailTSS
                 key={calculation.id}
                 calculation={calculation}
                 samplePreparations={samplePreparations}

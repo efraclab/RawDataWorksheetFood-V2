@@ -3,14 +3,14 @@ import MBASPreparationModule from "./components/MBASPreparationModule";
 
 export const mbasPreparationDefinition: PreparationDefinition = {
   id: "water.mbas",
-  name: "Anionic Surface Active Agents (as MBAS)",
+  name: "Surfactant-Methylene Blue (as MBAS)",
   pluginId: "water",
   laboratory: "Water",
   description: "MBAS concentration calculation using Abs, DF, M and C.",
   version: "1.0.0",
   metadata: {
     ui: {
-      title: "Anionic Surface Active Agents (as MBAS) Analysis",
+      title: "Surfactant-Methylene Blue (as MBAS) Analysis",
       component: MBASPreparationModule,
     },
     persistence: {

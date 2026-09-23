@@ -19,7 +19,7 @@ export interface MBASCalculationResult {
 
 /**
  * Excel formula:
- * Concentration (mg/L) = ((Abs + C) * DF) / M
+ * Concentration (mg/L) = ((Abs + C) * DF) / (M * 1000)
  */
 export function calculateMBAS(
   input: MBASCalculationInput,

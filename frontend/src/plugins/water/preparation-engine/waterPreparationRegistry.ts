@@ -3,6 +3,7 @@ import { fluoridePreparationHandler } from "../preparations/fluoride/handler";
 import { cyanidePreparationHandler } from "../preparations/cyanide/handler";
 import { nitratePreparationHandler } from "../preparations/nitrate/handler";
 import { tdsPreparationHandler } from "../preparations/tds/handler";
+import { tssPreparationHandler } from "../preparations/tss/handler";
 import { magnesiumPreparationHandler } from "../preparations/magnesium/handler";
 import { calciumPreparationHandler } from "../preparations/calcium/handler";
 import { alkalinityPreparationHandler } from "../preparations/alkalinity/handler";
@@ -26,6 +27,7 @@ export const waterPreparationRegistry: readonly PreparationHandler[] = [
   cyanidePreparationHandler,
   nitratePreparationHandler,
   tdsPreparationHandler,
+  tssPreparationHandler,
   magnesiumPreparationHandler,
   calciumPreparationHandler,
   alkalinityPreparationHandler,

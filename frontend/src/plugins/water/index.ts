@@ -17,6 +17,7 @@ export default waterPlugin;
 export * from "./preparations/cyanide";
 export * from "./preparations/nitrate";
 export * from "./preparations/tds";
+export * from "./preparations/tss";
 
 export * from "./preparations/nitrite";
 export * from "./preparations/sulphate";

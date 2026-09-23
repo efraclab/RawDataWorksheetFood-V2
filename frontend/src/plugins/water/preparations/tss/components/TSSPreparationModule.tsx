@@ -9,20 +9,20 @@ import PreparationCompleteSection from "../../../../../core/preparation-engine/c
 import PreparationToast from "../../../../../core/preparation-engine/components/PreparationToast";
 import SamplePreparationSection from "../../../../../core/preparation-engine/components/SamplePreparationSection";
 import UnlockPreparationDialog from "../../../../../core/preparation-engine/components/UnlockPreparationDialog";
-import type { SamplePreparationMBAS, SamplePreparationMBASStep } from "../models/SamplePreparationMBAS";
-import type { CalculationMBAS } from "../models/CalculationMBAS";
-import { createCalculationMBAS, createSamplePreparationMBAS, restoreCalculationMBAS } from "../factory";
-import MBASCalculationSection from "./MBASCalculationSection";
+import type { SamplePreparationTSS, SamplePreparationTSSStep } from "../models/SamplePreparationTSS";
+import type { CalculationTSS } from "../models/CalculationTSS";
+import { createCalculationTSS, createSamplePreparationTSS, restoreCalculationTSS } from "../factory";
+import TSSCalculationSection from "./TSSCalculationSection";
 
 type ModuleData = {
-  samplePreparations: SamplePreparationMBAS[];
+  samplePreparations: SamplePreparationTSS[];
   files: PreparationAttachedFile[];
-  calculations: CalculationMBAS[];
+  calculations: CalculationTSS[];
   completed: boolean;
   completedAt: string | null;
 };
 
-export interface MBASPreparationModuleProps {
+export interface TSSPreparationModuleProps {
   preparationId: string;
   parameterId: number;
   parameterName?: string | null;
@@ -40,22 +40,33 @@ const parseUnknown = (value: unknown): unknown => {
   try { return JSON.parse(value); } catch { return value; }
 };
 
+
+const unitForStep = (name: string): string => {
+  const normalized = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (normalized.includes("volumeofsample")) return "ml";
+  if (normalized.includes("initialwtofdish") || normalized.includes("finalwtofdish") || normalized.includes("initialweightofdish") || normalized.includes("finalweightofdish")) return "gm";
+  if (normalized.includes("volumeofagno3") || normalized.includes("volumeofh2so4") || normalized.includes("volumeofedta")) return "ml";
+  if (normalized.includes("strengthofagno3") || normalized.includes("strengthofh2so4")) return "N";
+  if (normalized.includes("strengthofedta")) return "M";
+  return "";
+};
+
 const normalizeDate = (value: unknown): string | null =>
   typeof value === "string" && value.trim() ? value : null;
 
-const restorePreparation = (value: unknown, index: number): SamplePreparationMBAS => {
-  const source = (value && typeof value === "object" ? value : {}) as Partial<SamplePreparationMBAS>;
-  const steps = Array.isArray(source.steps) ? source.steps : createSamplePreparationMBAS(index).steps;
+const restorePreparation = (value: unknown, index: number): SamplePreparationTSS => {
+  const source = (value && typeof value === "object" ? value : {}) as Partial<SamplePreparationTSS>;
+  const steps = Array.isArray(source.steps) ? source.steps : createSamplePreparationTSS(index).steps;
   return {
-    ...createSamplePreparationMBAS(index),
+    ...createSamplePreparationTSS(index),
     ...source,
     id: typeof source.id === "number" ? source.id : index + 1,
     label: typeof source.label === "string" ? source.label : `Sample Preparation ${index + 1}`,
-    steps: steps as SamplePreparationMBASStep[],
+    steps: steps as SamplePreparationTSSStep[],
   };
 };
 
-const MBASPreparationModule = forwardRef<PreparationModuleHandle<ModuleData, unknown>, MBASPreparationModuleProps>(
+const TSSPreparationModule = forwardRef<PreparationModuleHandle<ModuleData, unknown>, TSSPreparationModuleProps>(
   (props, ref) => {
     const {
       parameterId, parameterName, parameterCode, isLocked,
@@ -63,9 +74,9 @@ const MBASPreparationModule = forwardRef<PreparationModuleHandle<ModuleData, unk
       onLockPreparation, onUnlockPreparation,
     } = props;
 
-    const [samplePreparations, setSamplePreparations] = useState<SamplePreparationMBAS[]>([]);
+    const [samplePreparations, setSamplePreparations] = useState<SamplePreparationTSS[]>([]);
     const [files, setFiles] = useState<PreparationAttachedFile[]>([]);
-    const [calculations, setCalculations] = useState<CalculationMBAS[]>([]);
+    const [calculations, setCalculations] = useState<CalculationTSS[]>([]);
     const [completed, setCompleted] = useState(false);
     const [completedAt, setCompletedAt] = useState<string | null>(null);
     const [showComplete, setShowComplete] = useState(false);
@@ -81,8 +92,8 @@ const MBASPreparationModule = forwardRef<PreparationModuleHandle<ModuleData, unk
 
     const addPreparation = () => {
       if (locked || samplePreparations.length >= 10) return;
-      setSamplePreparations((items) => [...items, createSamplePreparationMBAS(items.length)]);
-      notify("MBAS sample preparation added.");
+      setSamplePreparations((items) => [...items, createSamplePreparationTSS(items.length)]);
+      notify("TSS sample preparation added.");
     };
 
     const removePreparation = (index: number) => {
@@ -98,7 +109,7 @@ const MBASPreparationModule = forwardRef<PreparationModuleHandle<ModuleData, unk
       }));
     };
 
-    const updateStep = (preparationId: number, stepName: string, field: keyof SamplePreparationMBASStep, value: string) => {
+    const updateStep = (preparationId: number, stepName: string, field: keyof SamplePreparationTSSStep, value: string) => {
       if (locked) return;
       setSamplePreparations((items) => items.map((item) =>
         item.id !== preparationId ? item : {
@@ -132,7 +143,7 @@ const MBASPreparationModule = forwardRef<PreparationModuleHandle<ModuleData, unk
       const now = new Date().toISOString();
       setCompleted(true); setCompletedAt(now); setShowComplete(false);
       onLockPreparation(parameterId);
-      notify("MBAS preparation marked as complete.");
+      notify("TSS preparation marked as complete.");
     };
 
     const unlock = async () => {
@@ -141,11 +152,11 @@ const MBASPreparationModule = forwardRef<PreparationModuleHandle<ModuleData, unk
       try {
         setCompleted(false); setCompletedAt(null);
         onUnlockPreparation(parameterId); setShowUnlock(false);
-        notify("MBAS preparation unlocked successfully.");
+        notify("TSS preparation unlocked successfully.");
       } finally { setUnlocking(false); }
     };
 
-    const withDefaultSelection = (items: CalculationMBAS[], preparations: SamplePreparationMBAS[]) =>
+    const withDefaultSelection = (items: CalculationTSS[], preparations: SamplePreparationTSS[]) =>
       items.map((item) => ({
         ...item,
         selectedSamplePreparationLabel: item.selectedSamplePreparationLabel ??
@@ -160,7 +171,7 @@ const MBASPreparationModule = forwardRef<PreparationModuleHandle<ModuleData, unk
         const restoredPreparations = Array.isArray(value.samplePreparations)
           ? value.samplePreparations.map((item, index) => restorePreparation(item, index)) : [];
         const restoredCalculations = Array.isArray(value.calculations)
-          ? value.calculations.map((item) => restoreCalculationMBAS(item)) : [];
+          ? value.calculations.map((item) => restoreCalculationTSS(item)) : [];
         setSamplePreparations(restoredPreparations);
         setFiles(Array.isArray(value.files) ? value.files : []);
         setCalculations(withDefaultSelection(restoredCalculations, restoredPreparations));
@@ -171,14 +182,14 @@ const MBASPreparationModule = forwardRef<PreparationModuleHandle<ModuleData, unk
         if (!worksheet || typeof worksheet !== "object") return;
         const value = worksheet as { preparations?: unknown[]; calculations?: unknown[]; preparationCompletedAt?: unknown };
         const restoredPreparations = (value.preparations ?? [])
-          .filter((item) => String((item as Record<string, unknown>)?.preparationType ?? "").toLowerCase().replace(/[^a-z0-9]/g, "") === "mbas")
+          .filter((item) => String((item as Record<string, unknown>)?.preparationType ?? "").toLowerCase().replace(/[^a-z0-9]/g, "") === "tss")
           .map((item, index) => restorePreparation({ ...(item as object), steps: parseUnknown((item as Record<string, unknown>).steps) }, index));
         const restoredCalculations = (value.calculations ?? [])
-          .filter((item) => String((item as Record<string, unknown>)?.calculationType ?? "").toLowerCase().replace(/[^a-z0-9]/g, "") === "mbas")
+          .filter((item) => String((item as Record<string, unknown>)?.calculationType ?? "").toLowerCase().replace(/[^a-z0-9]/g, "") === "tss")
           .map((item) => {
             const source = item as Record<string, unknown>;
             const data = parseUnknown(source.data);
-            return restoreCalculationMBAS(data);
+            return restoreCalculationTSS(data);
           });
         setSamplePreparations(restoredPreparations);
         setCalculations(withDefaultSelection(restoredCalculations, restoredPreparations));
@@ -197,8 +208,8 @@ const MBASPreparationModule = forwardRef<PreparationModuleHandle<ModuleData, unk
                 <BiTestTube className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-emerald-900">Surfactant-Methylene Blue (as MBAS) Analysis</h2>
-                <p className="text-sm text-emerald-600">Water Laboratory • MBAS Testing</p>
+                <h2 className="text-2xl font-bold text-emerald-900">Total Suspended Solids (TSS) Analysis</h2>
+                <p className="text-sm text-emerald-600">Water Laboratory • TSS Testing</p>
               </div>
             </div>
             <div className="rounded-full bg-emerald-100 px-5 py-2 text-sm font-semibold text-emerald-700">
@@ -208,7 +219,7 @@ const MBASPreparationModule = forwardRef<PreparationModuleHandle<ModuleData, unk
         </div>
 
         <SamplePreparationSection
-          title="Sample Preparations for Surfactant-Methylene Blue (as MBAS)"
+          title="Sample Preparations for Total Suspended Solids (TSS)"
           preparations={samplePreparations}
           isLocked={locked}
           onAddPreparation={addPreparation}
@@ -218,7 +229,7 @@ const MBASPreparationModule = forwardRef<PreparationModuleHandle<ModuleData, unk
               <div className="flex items-center justify-between bg-gradient-to-r from-emerald-700 via-emerald-800 to-slate-900 px-4 py-3 text-white">
                 <div>
                   <div className="font-semibold">{preparation.label}</div>
-                  <div className="text-xs text-emerald-100">Surfactant-Methylene Blue (as MBAS) inputs</div>
+                  <div className="text-xs text-emerald-100">Total Suspended Solids (TSS) inputs</div>
                 </div>
                 <button type="button" disabled={locked} onClick={() => removePreparation(index)} className="disabled:opacity-40" aria-label={`Remove ${preparation.label}`}>
                   <Trash2 className="h-4 w-4" />
@@ -229,7 +240,7 @@ const MBASPreparationModule = forwardRef<PreparationModuleHandle<ModuleData, unk
                   <div key={step.name} className="grid items-center gap-3 rounded-lg border border-emerald-200 bg-white p-3 md:grid-cols-[minmax(0,1fr)_220px_70px]">
                     <label className="text-sm font-semibold text-emerald-900">{step.name}</label>
                     <input disabled={locked} value={step.value1 ?? ""} onChange={(event) => updateStep(preparation.id, step.name, "value1", event.target.value)} inputMode="decimal" placeholder="Enter value" className="rounded-lg border border-emerald-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
-                    <span className="text-xs font-semibold text-slate-500">{step.unit1 || "—"}</span>
+                    <span className="text-xs font-semibold text-slate-500">{step.unit1 || unitForStep(step.name) || "—"}</span>
                   </div>
                 ))}
               </div>
@@ -239,17 +250,17 @@ const MBASPreparationModule = forwardRef<PreparationModuleHandle<ModuleData, unk
 
         {samplePreparations.length > 0 && <>
           <div className="mx-6 mb-6">
-            <FileAttachmentSection files={files} isLocked={locked} title="Attach Surfactant-Methylene Blue (as MBAS) Preparation Files (PDF)" maxFiles={10} onAttachFiles={addFiles} onRemoveFile={(_, index) => setFiles((items) => items.filter((__, i) => i !== index))} />
+            <FileAttachmentSection files={files} isLocked={locked} title="Attach Total Suspended Solids (TSS) Preparation Files (PDF)" maxFiles={10} onAttachFiles={addFiles} onRemoveFile={(_, index) => setFiles((items) => items.filter((__, i) => i !== index))} />
           </div>
           <div className="mx-6">
-            <PreparationCompleteSection preparationName="Surfactant-Methylene Blue (as MBAS)" isCompleted={completed} isLocked={locked} completedAt={completedAt} canUnlockPreparation={canUnlockPreparation} onComplete={() => setShowComplete(true)} onUnlock={() => setShowUnlock(true)} />
+            <PreparationCompleteSection preparationName="Total Suspended Solids (TSS)" isCompleted={completed} isLocked={locked} completedAt={completedAt} canUnlockPreparation={canUnlockPreparation} onComplete={() => setShowComplete(true)} onUnlock={() => setShowUnlock(true)} />
           </div>
-          {completed && <MBASCalculationSection calculations={calculations} samplePreparations={samplePreparations} canEditCalculations={canEditCalculations} onAdd={() => {
-                        setCalculations((items) => [...items, { ...createCalculationMBAS(items.length), selectedSamplePreparationLabel: samplePreparations[0]?.label ?? null }]);
+          {completed && <TSSCalculationSection calculations={calculations} samplePreparations={samplePreparations} canEditCalculations={canEditCalculations} onAdd={() => {
+            setCalculations((items) => [...items, { ...createCalculationTSS(items.length), selectedSamplePreparationLabel: samplePreparations[0]?.label ?? null }]);
           }} onRemove={(id) => setCalculations((items) => items.filter((item) => item.id !== id))} onUpdate={(value) => setCalculations((items) => items.map((item) => item.id === value.id ? value : item))} />}
         </>}
 
-        <PreparationCompleteModal isOpen={showComplete} preparationName="Surfactant-Methylene Blue (as MBAS)" parameterName={parameterName} parameterCode={parameterCode} onConfirm={complete} onCancel={() => setShowComplete(false)} />
+        <PreparationCompleteModal isOpen={showComplete} preparationName="Total Suspended Solids (TSS)" parameterName={parameterName} parameterCode={parameterCode} onConfirm={complete} onCancel={() => setShowComplete(false)} />
         <UnlockPreparationDialog isOpen={showUnlock} isUnlocking={unlocking} parameterName={parameterName ?? ""} parameterCode={parameterCode ?? ""} onClose={() => setShowUnlock(false)} onConfirm={unlock} />
         <PreparationToast visible={toast.visible} type={toast.type} message={toast.message} onClose={() => setToast((value) => ({ ...value, visible: false }))} />
       </div>
@@ -257,5 +268,5 @@ const MBASPreparationModule = forwardRef<PreparationModuleHandle<ModuleData, unk
   },
 );
 
-MBASPreparationModule.displayName = "MBASPreparationModule";
-export default MBASPreparationModule;
+TSSPreparationModule.displayName = "TSSPreparationModule";
+export default TSSPreparationModule;

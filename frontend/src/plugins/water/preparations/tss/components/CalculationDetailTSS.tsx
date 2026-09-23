@@ -1,40 +1,45 @@
 import { useMemo, useState } from "react";
 import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import CustomDropdown from "../../../../../shared/CustomDropdown";
-import type { CalculationMBAS } from "../models/CalculationMBAS";
-import type { SamplePreparationMBAS } from "../models/SamplePreparationMBAS";
-import { calculateMBAS } from "../calculation";
+import type { CalculationTSS } from "../models/CalculationTSS";
+import type { SamplePreparationTSS } from "../models/SamplePreparationTSS";
+import { calculateTSS } from "../calculation";
 
 const text = (value: unknown) => (value == null ? "" : String(value));
 
-const truncateToThreeDecimals = (value: number) => Math.trunc(value * 1000) / 1000;
+const truncateToThreeDecimals = (value: number) => Math.round((value + Number.EPSILON) * 1000) / 1000;
 
 const numberOrNull = (value: unknown) => {
   const parsed = Number(text(value).trim());
   return text(value).trim() === "" || !Number.isFinite(parsed) ? null : parsed;
 };
 
-const normalizeStepName = (value: string): string =>
+const normalizeStepName = (value: string) =>
   value.toLowerCase().replace(/[^a-z0-9]/g, "");
 
-const step = (preparation: SamplePreparationMBAS | null, names: string | string[]) => {
+const step = (
+  preparation: SamplePreparationTSS | null,
+  names: string[],
+) => {
   if (!preparation) return undefined;
-  const expectedNames = (Array.isArray(names) ? names : [names]).map(normalizeStepName);
+  const normalizedNames = names.map(normalizeStepName);
   return preparation.steps.find((item) => {
     const actual = normalizeStepName(item.name);
-    return expectedNames.some((expected) => actual === expected || actual.includes(expected) || expected.includes(actual));
+    return normalizedNames.some(
+      (expected) => actual === expected || actual.includes(expected) || expected.includes(actual),
+    );
   });
 };
 
 interface Props {
-  calculation: CalculationMBAS;
-  samplePreparations: SamplePreparationMBAS[];
-  onUpdate: (calculation: CalculationMBAS) => void;
+  calculation: CalculationTSS;
+  samplePreparations: SamplePreparationTSS[];
+  onUpdate: (calculation: CalculationTSS) => void;
   onRemove: () => void;
   isLocked: boolean;
 }
 
-export default function CalculationDetailMBAS({
+export default function CalculationDetailTSS({
   calculation,
   samplePreparations,
   onUpdate,
@@ -43,6 +48,8 @@ export default function CalculationDetailMBAS({
 }: Props) {
   const [expanded, setExpanded] = useState(true);
 
+  // Always resolve a preparation. Older drafts can contain a missing or stale
+  // selectedSamplePreparationLabel, which previously made Calculate Result a no-op.
   const selected = useMemo(
     () =>
       samplePreparations.find(
@@ -52,48 +59,62 @@ export default function CalculationDetailMBAS({
   );
 
   const values = useMemo(() => {
-    const abs = step(selected, "Abs");
-    const c = step(selected, "C");
-    const df = step(selected, "DF");
-    const m = step(selected, "M");
+    const initialWeight = step(selected, [
+      "Initial wt. of dish+FP",
+      "Initial weight of dish+FP",
+      "Initial wt of dish",
+      "Initial wt. of dish+FP+FP",
+      "Initial weight of dish+FP+FP",
+    ]);
+    const volume = step(selected, [
+      "Volume of sample",
+      "Sample volume",
+    ]);
+    const finalWeight = step(selected, [
+      "Final wt. of dish+FP",
+      "Final weight of dish+FP",
+      "Final wt of dish",
+      "Final wt. of dish+FP+FP",
+      "Final weight of dish+FP+FP",
+    ]);
 
     return {
-      abs: abs?.value1 ?? "",
-      c: c?.value1 ?? "",
-      df: df?.value1 ?? "",
-      m: m?.value1 ?? "",
+      initialWeight: initialWeight?.value1 ?? "",
+      volume: volume?.value1 ?? "",
+      finalWeight: finalWeight?.value1 ?? "",
     };
   }, [selected]);
 
-  const requiredKeys = ["abs", "c", "df", "m"] as const;
+  const requiredKeys = ["initialWeight", "volume", "finalWeight"] as const;
   const errors = requiredKeys
     .filter((key) => text(values[key]).trim() === "" || numberOrNull(values[key]) === null)
-    .map((key) => `${key.toUpperCase()} is required and must be numeric`)
+    .map((key) => `${key === "initialWeight" ? "Initial weight of dish+FP" : key === "finalWeight" ? "Final weight of dish+FP" : "Volume of sample"} is required and must be numeric`)
     .concat(
-      numberOrNull(values.df) !== null && numberOrNull(values.df)! <= 0
-        ? ["DF must be greater than zero"]
+      numberOrNull(values.volume) !== null && numberOrNull(values.volume)! <= 0
+        ? ["Volume of sample must be greater than zero"]
         : [],
-      numberOrNull(values.m) !== null && numberOrNull(values.m) === 0
-        ? ["M cannot be zero"]
+      numberOrNull(values.initialWeight) !== null && numberOrNull(values.finalWeight) !== null && numberOrNull(values.finalWeight)! < numberOrNull(values.initialWeight)!
+        ? ["Final weight of dish+FP cannot be less than initial weight of dish"]
         : [],
     );
 
-  const update = <K extends keyof CalculationMBAS>(
+  const update = <K extends keyof CalculationTSS>(
     field: K,
-    value: CalculationMBAS[K],
+    value: CalculationTSS[K],
   ) => onUpdate({ ...calculation, [field]: value });
 
   const runCalculation = () => {
-    if (isLocked || !selected) return;
-    if (errors.length > 0) return;
+    // Calculation must remain executable when the sample preparation is locked.
+    // Locking prevents editing preparation inputs; it must not prevent calculating
+    // already-entered values.
+    if (!selected || errors.length > 0) return;
 
-    const result = calculateMBAS(values);
+    const result = calculateTSS(values);
+    if (!result.success) return;
     onUpdate({
       ...calculation,
       selectedSamplePreparationLabel: selected.label,
-      calculationResult: result.success
-        ? result.result
-        : null,
+      calculationResult: result.result,
       calculationResultUnit: "mg/L",
     });
   };
@@ -115,7 +136,7 @@ export default function CalculationDetailMBAS({
           onClick={() => setExpanded((value) => !value)}
           className="font-semibold"
         >
-          {calculation.label} · Surfactant-Methylene Blue (as MBAS)
+          {calculation.label} · Total Suspended Solids (TSS)
         </button>
 
         <div className="flex gap-2">
@@ -155,7 +176,7 @@ export default function CalculationDetailMBAS({
           {selected && (
             <>
               <div className="rounded-lg border border-emerald-200 bg-slate-50 p-4 text-center font-mono text-xs">
-                Concn (mg/L) = ((Abs + C) × DF) / (M × 1000)
+                TSS (mg/L) = ((Final wt. of dish+FP − Initial wt. of dish+FP) × 1000000) / Volume of sample
               </div>
 
               {errors.length > 0 && (
@@ -179,7 +200,7 @@ export default function CalculationDetailMBAS({
                       update("acceptanceLimitMin", event.target.value)
                     }
                     placeholder="Minimum Limit"
-                    className="w-full rounded-lg border border-emerald-300 px-3 py-2 outline-none transition-colors hover:!border-emerald-500 focus:!border-emerald-500 focus:ring-0"
+                    className="w-full rounded-lg border border-emerald-300 px-3 py-2 outline-none transition-colors hover:border-emerald-500 focus:border-emerald-500"
                   />
                   <input
                     disabled={isLocked}
@@ -188,7 +209,7 @@ export default function CalculationDetailMBAS({
                       update("acceptanceLimitMax", event.target.value)
                     }
                     placeholder="Maximum Limit"
-                    className="w-full rounded-lg border border-emerald-300 px-3 py-2 outline-none transition-colors hover:!border-emerald-500 focus:!border-emerald-500 focus:ring-0"
+                    className="w-full rounded-lg border border-emerald-300 px-3 py-2 outline-none transition-colors hover:border-emerald-500 focus:border-emerald-500"
                   />
                 </div>
               </div>
@@ -196,7 +217,7 @@ export default function CalculationDetailMBAS({
               <div className="text-center">
                 <button
                   type="button"
-                  disabled={!selected}
+                  disabled={!selected || errors.length > 0}
                   onClick={runCalculation}
                   className="rounded-lg bg-gradient-to-r from-emerald-700 to-slate-900 px-6 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
@@ -207,7 +228,7 @@ export default function CalculationDetailMBAS({
               {calculation.calculationResult !== null && (
                 <div className="overflow-hidden rounded-lg border-2 border-emerald-300">
                   <div className="bg-gradient-to-r from-emerald-700 via-emerald-800 to-slate-900 px-4 py-2 font-bold text-white">
-                    MBAS Result
+                    TSS Result
                   </div>
                   <div className="flex items-center gap-3 p-4 text-2xl font-bold">
                     <span>
