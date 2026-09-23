@@ -72,6 +72,7 @@ export default function CalculationDetailLithosun400({
   onUpdate: (value: CalculationLithosun400) => void;
 }) {
   const [expanded, setExpanded] = useState(true);
+  const [stageErrors, setStageErrors] = useState<Record<string, string[]>>({});
 
   // Automatically associate a newly created/restored calculation with the
   // first available sample preparation. This also fixes older saved records
@@ -131,6 +132,28 @@ export default function CalculationDetailLithosun400({
       labelClaim: getStepValue(preparationStage, 'Label Claim'),
       conversionFactor: getStepValue(preparationStage, 'Conversion Factor'),
     };
+
+    const required: Array<[string, unknown, boolean]> = [
+      ["Instrument Concentration (Blank)", common.blank, false],
+      ["Volume makeup (V1)", common.v1, true],
+      ["Volume taken (V2)", common.v2, true],
+      ["Volume makeup (V3)", common.v3, true],
+      ["Label Claim", common.labelClaim, true],
+      ["Conversion Factor", common.conversionFactor, true],
+    ];
+    const errors = required.flatMap(([label, value, positive]) => {
+      const raw = text(value).trim();
+      if (!raw) return [`${label} is required`];
+      const number = numberValue(value);
+      if (number === null) return [`${label} must be numeric`];
+      return positive && number <= 0 ? [`${label} must be greater than zero`] : [];
+    });
+    const sampleErrors = currentStage.dissolutionSamples
+      .map((sample, index) => text(sample).trim() ? (numberValue(sample) === null ? `Dissolution Sample ${index + 1} must be numeric` : '') : `Dissolution Sample ${index + 1} is required`)
+      .filter(Boolean);
+    const allErrors = [...errors, ...sampleErrors];
+    setStageErrors((current) => ({ ...current, [hour]: allErrors }));
+    if (allErrors.length > 0) return;
 
     const results = currentStage.dissolutionSamples.map((sample) => {
       const result = calculateLithosun400({ sample, ...common });
@@ -335,6 +358,13 @@ export default function CalculationDetailLithosun400({
                       {' '}{min ?? '—'} to {max ?? '—'}.
                     </p>
                   </div>
+
+                  {(stageErrors[hour]?.length ?? 0) > 0 && (
+                    <div className="rounded-lg border-2 border-red-200 bg-red-50 px-5 py-4" role="alert">
+                      <h4 className="mb-2 text-sm font-bold text-red-800">Validation Errors</h4>
+                      <ul className="space-y-1">{stageErrors[hour].map((error) => <li key={error} className="text-xs text-red-700">• {error}</li>)}</ul>
+                    </div>
+                  )}
 
                   <div className="text-center">
                     <button

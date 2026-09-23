@@ -9,20 +9,20 @@ import PreparationCompleteSection from "../../../../../core/preparation-engine/c
 import PreparationToast from "../../../../../core/preparation-engine/components/PreparationToast";
 import SamplePreparationSection from "../../../../../core/preparation-engine/components/SamplePreparationSection";
 import UnlockPreparationDialog from "../../../../../core/preparation-engine/components/UnlockPreparationDialog";
-import type { SamplePreparationFluoride, SamplePreparationFluorideStep } from "../models/SamplePreparationFluoride";
-import type { CalculationFluoride } from "../models/CalculationFluoride";
-import { createCalculationFluoride, createSamplePreparationFluoride, restoreCalculationFluoride } from "../factory";
-import FluorideCalculationSection from "./FluorideCalculationSection";
+import type { SamplePreparationNitrate, SamplePreparationNitrateStep } from "../models/SamplePreparationNitrate";
+import type { CalculationNitrate } from "../models/CalculationNitrate";
+import { createCalculationNitrate, createSamplePreparationNitrate, restoreCalculationNitrate } from "../factory";
+import NitrateCalculationSection from "./NitrateCalculationSection";
 
 type ModuleData = {
-  samplePreparations: SamplePreparationFluoride[];
+  samplePreparations: SamplePreparationNitrate[];
   files: PreparationAttachedFile[];
-  calculations: CalculationFluoride[];
+  calculations: CalculationNitrate[];
   completed: boolean;
   completedAt: string | null;
 };
 
-export interface FluoridePreparationModuleProps {
+export interface NitratePreparationModuleProps {
   preparationId: string;
   parameterId: number;
   parameterName?: string | null;
@@ -43,19 +43,19 @@ const parseUnknown = (value: unknown): unknown => {
 const normalizeDate = (value: unknown): string | null =>
   typeof value === "string" && value.trim() ? value : null;
 
-const restorePreparation = (value: unknown, index: number): SamplePreparationFluoride => {
-  const source = (value && typeof value === "object" ? value : {}) as Partial<SamplePreparationFluoride>;
-  const steps = Array.isArray(source.steps) ? source.steps : createSamplePreparationFluoride(index).steps;
+const restorePreparation = (value: unknown, index: number): SamplePreparationNitrate => {
+  const source = (value && typeof value === "object" ? value : {}) as Partial<SamplePreparationNitrate>;
+  const steps = Array.isArray(source.steps) ? source.steps : createSamplePreparationNitrate(index).steps;
   return {
-    ...createSamplePreparationFluoride(index),
+    ...createSamplePreparationNitrate(index),
     ...source,
     id: typeof source.id === "number" ? source.id : index + 1,
     label: typeof source.label === "string" ? source.label : `Sample Preparation ${index + 1}`,
-    steps: steps as SamplePreparationFluorideStep[],
+    steps: steps as SamplePreparationNitrateStep[],
   };
 };
 
-const FluoridePreparationModule = forwardRef<PreparationModuleHandle<ModuleData, unknown>, FluoridePreparationModuleProps>(
+const NitratePreparationModule = forwardRef<PreparationModuleHandle<ModuleData, unknown>, NitratePreparationModuleProps>(
   (props, ref) => {
     const {
       parameterId, parameterName, parameterCode, isLocked,
@@ -63,9 +63,9 @@ const FluoridePreparationModule = forwardRef<PreparationModuleHandle<ModuleData,
       onLockPreparation, onUnlockPreparation,
     } = props;
 
-    const [samplePreparations, setSamplePreparations] = useState<SamplePreparationFluoride[]>([]);
+    const [samplePreparations, setSamplePreparations] = useState<SamplePreparationNitrate[]>([]);
     const [files, setFiles] = useState<PreparationAttachedFile[]>([]);
-    const [calculations, setCalculations] = useState<CalculationFluoride[]>([]);
+    const [calculations, setCalculations] = useState<CalculationNitrate[]>([]);
     const [completed, setCompleted] = useState(false);
     const [completedAt, setCompletedAt] = useState<string | null>(null);
     const [showComplete, setShowComplete] = useState(false);
@@ -81,8 +81,8 @@ const FluoridePreparationModule = forwardRef<PreparationModuleHandle<ModuleData,
 
     const addPreparation = () => {
       if (locked || samplePreparations.length >= 10) return;
-      setSamplePreparations((items) => [...items, createSamplePreparationFluoride(items.length)]);
-      notify("Fluoride sample preparation added.");
+      setSamplePreparations((items) => [...items, createSamplePreparationNitrate(items.length)]);
+      notify("Nitrate sample preparation added.");
     };
 
     const removePreparation = (index: number) => {
@@ -98,7 +98,7 @@ const FluoridePreparationModule = forwardRef<PreparationModuleHandle<ModuleData,
       }));
     };
 
-    const updateStep = (preparationId: number, stepName: string, field: keyof SamplePreparationFluorideStep, value: string) => {
+    const updateStep = (preparationId: number, stepName: string, field: keyof SamplePreparationNitrateStep, value: string) => {
       if (locked) return;
       setSamplePreparations((items) => items.map((item) =>
         item.id !== preparationId ? item : {
@@ -132,7 +132,7 @@ const FluoridePreparationModule = forwardRef<PreparationModuleHandle<ModuleData,
       const now = new Date().toISOString();
       setCompleted(true); setCompletedAt(now); setShowComplete(false);
       onLockPreparation(parameterId);
-      notify("Fluoride preparation marked as complete.");
+      notify("Nitrate preparation marked as complete.");
     };
 
     const unlock = async () => {
@@ -141,11 +141,11 @@ const FluoridePreparationModule = forwardRef<PreparationModuleHandle<ModuleData,
       try {
         setCompleted(false); setCompletedAt(null);
         onUnlockPreparation(parameterId); setShowUnlock(false);
-        notify("Fluoride preparation unlocked successfully.");
+        notify("Nitrate preparation unlocked successfully.");
       } finally { setUnlocking(false); }
     };
 
-    const withDefaultSelection = (items: CalculationFluoride[], preparations: SamplePreparationFluoride[]) =>
+    const withDefaultSelection = (items: CalculationNitrate[], preparations: SamplePreparationNitrate[]) =>
       items.map((item) => ({
         ...item,
         selectedSamplePreparationLabel: item.selectedSamplePreparationLabel ??
@@ -160,7 +160,7 @@ const FluoridePreparationModule = forwardRef<PreparationModuleHandle<ModuleData,
         const restoredPreparations = Array.isArray(value.samplePreparations)
           ? value.samplePreparations.map((item, index) => restorePreparation(item, index)) : [];
         const restoredCalculations = Array.isArray(value.calculations)
-          ? value.calculations.map((item) => restoreCalculationFluoride(item)) : [];
+          ? value.calculations.map((item) => restoreCalculationNitrate(item)) : [];
         setSamplePreparations(restoredPreparations);
         setFiles(Array.isArray(value.files) ? value.files : []);
         setCalculations(withDefaultSelection(restoredCalculations, restoredPreparations));
@@ -171,14 +171,14 @@ const FluoridePreparationModule = forwardRef<PreparationModuleHandle<ModuleData,
         if (!worksheet || typeof worksheet !== "object") return;
         const value = worksheet as { preparations?: unknown[]; calculations?: unknown[]; preparationCompletedAt?: unknown };
         const restoredPreparations = (value.preparations ?? [])
-          .filter((item) => String((item as Record<string, unknown>)?.preparationType ?? "").toLowerCase() === "fluoride")
+          .filter((item) => String((item as Record<string, unknown>)?.preparationType ?? "").toLowerCase() === "nitrate")
           .map((item, index) => restorePreparation({ ...(item as object), steps: parseUnknown((item as Record<string, unknown>).steps) }, index));
         const restoredCalculations = (value.calculations ?? [])
-          .filter((item) => String((item as Record<string, unknown>)?.calculationType ?? "").toLowerCase() === "fluoride")
+          .filter((item) => String((item as Record<string, unknown>)?.calculationType ?? "").toLowerCase() === "nitrate")
           .map((item) => {
             const source = item as Record<string, unknown>;
             const data = parseUnknown(source.data);
-            return restoreCalculationFluoride(data);
+            return restoreCalculationNitrate(data);
           });
         setSamplePreparations(restoredPreparations);
         setCalculations(withDefaultSelection(restoredCalculations, restoredPreparations));
@@ -197,8 +197,8 @@ const FluoridePreparationModule = forwardRef<PreparationModuleHandle<ModuleData,
                 <BiTestTube className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-emerald-900">Fluoride (as F) Analysis</h2>
-                <p className="text-sm text-emerald-600">Water Laboratory • Fluoride Testing</p>
+                <h2 className="text-2xl font-bold text-emerald-900">Nitrate (as NO3) Analysis</h2>
+                <p className="text-sm text-emerald-600">Water Laboratory • Nitrate Testing</p>
               </div>
             </div>
             <div className="rounded-full bg-emerald-100 px-5 py-2 text-sm font-semibold text-emerald-700">
@@ -208,7 +208,7 @@ const FluoridePreparationModule = forwardRef<PreparationModuleHandle<ModuleData,
         </div>
 
         <SamplePreparationSection
-          title="Sample Preparations for Fluoride (as F)"
+          title="Sample Preparations for Nitrate (as NO3)"
           preparations={samplePreparations}
           isLocked={locked}
           onAddPreparation={addPreparation}
@@ -218,7 +218,7 @@ const FluoridePreparationModule = forwardRef<PreparationModuleHandle<ModuleData,
               <div className="flex items-center justify-between bg-gradient-to-r from-emerald-700 via-emerald-800 to-slate-900 px-4 py-3 text-white">
                 <div>
                   <div className="font-semibold">{preparation.label}</div>
-                  <div className="text-xs text-emerald-100">Fluoride (as F) inputs</div>
+                  <div className="text-xs text-emerald-100">Nitrate (as NO3) inputs</div>
                 </div>
                 <button type="button" disabled={locked} onClick={() => removePreparation(index)} className="disabled:opacity-40" aria-label={`Remove ${preparation.label}`}>
                   <Trash2 className="h-4 w-4" />
@@ -239,18 +239,18 @@ const FluoridePreparationModule = forwardRef<PreparationModuleHandle<ModuleData,
 
         {samplePreparations.length > 0 && <>
           <div className="mx-6 mb-6">
-            <FileAttachmentSection files={files} isLocked={locked} title="Attach Fluoride (as F) Preparation Files (PDF)" maxFiles={10} onAttachFiles={addFiles} onRemoveFile={(_, index) => setFiles((items) => items.filter((__, i) => i !== index))} />
+            <FileAttachmentSection files={files} isLocked={locked} title="Attach Nitrate (as NO3) Preparation Files (PDF)" maxFiles={10} onAttachFiles={addFiles} onRemoveFile={(_, index) => setFiles((items) => items.filter((__, i) => i !== index))} />
           </div>
           <div className="mx-6">
-            <PreparationCompleteSection preparationName="Fluoride (as F)" isCompleted={completed} isLocked={locked} completedAt={completedAt} canUnlockPreparation={canUnlockPreparation} onComplete={() => setShowComplete(true)} onUnlock={() => setShowUnlock(true)} />
+            <PreparationCompleteSection preparationName="Nitrate (as NO3)" isCompleted={completed} isLocked={locked} completedAt={completedAt} canUnlockPreparation={canUnlockPreparation} onComplete={() => setShowComplete(true)} onUnlock={() => setShowUnlock(true)} />
           </div>
-          {completed && <FluorideCalculationSection calculations={calculations} samplePreparations={samplePreparations} canEditCalculations={canEditCalculations} onAdd={() => {
+          {completed && <NitrateCalculationSection calculations={calculations} samplePreparations={samplePreparations} canEditCalculations={canEditCalculations} onAdd={() => {
             if (!canEditCalculations) return;
-            setCalculations((items) => [...items, { ...createCalculationFluoride(items.length), selectedSamplePreparationLabel: samplePreparations[0]?.label ?? null }]);
+            setCalculations((items) => [...items, { ...createCalculationNitrate(items.length), selectedSamplePreparationLabel: samplePreparations[0]?.label ?? null }]);
           }} onRemove={(id) => setCalculations((items) => items.filter((item) => item.id !== id))} onUpdate={(value) => setCalculations((items) => items.map((item) => item.id === value.id ? value : item))} />}
         </>}
 
-        <PreparationCompleteModal isOpen={showComplete} preparationName="Fluoride (as F)" parameterName={parameterName} parameterCode={parameterCode} onConfirm={complete} onCancel={() => setShowComplete(false)} />
+        <PreparationCompleteModal isOpen={showComplete} preparationName="Nitrate (as NO3)" parameterName={parameterName} parameterCode={parameterCode} onConfirm={complete} onCancel={() => setShowComplete(false)} />
         <UnlockPreparationDialog isOpen={showUnlock} isUnlocking={unlocking} parameterName={parameterName ?? ""} parameterCode={parameterCode ?? ""} onClose={() => setShowUnlock(false)} onConfirm={unlock} />
         <PreparationToast visible={toast.visible} type={toast.type} message={toast.message} onClose={() => setToast((value) => ({ ...value, visible: false }))} />
       </div>
@@ -258,5 +258,5 @@ const FluoridePreparationModule = forwardRef<PreparationModuleHandle<ModuleData,
   },
 );
 
-FluoridePreparationModule.displayName = "FluoridePreparationModule";
-export default FluoridePreparationModule;
+NitratePreparationModule.displayName = "NitratePreparationModule";
+export default NitratePreparationModule;

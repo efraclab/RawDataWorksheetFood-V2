@@ -115,6 +115,17 @@ export default function CalculationDetailSfgc({ calculation, samplePreparations,
                 </div>
               </div>
 
+              {errors.length > 0 && (
+                <div className="rounded-lg border-2 border-red-200 bg-red-50 px-5 py-4" role="alert">
+                  <h4 className="mb-2 text-sm font-bold text-red-800">Validation Errors</h4>
+                  <ul className="space-y-1">
+                    {errors.map((error) => (
+                      <li key={error} className="text-xs text-red-700">• {typeof error === "string" ? error : String(error)}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               <div className="text-center">
                 <button type="button" disabled={isLocked || errors.length > 0} onClick={runCalculation} className="rounded-lg bg-gradient-to-r from-emerald-700 to-slate-900 px-6 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">Calculate Result</button>
               </div>

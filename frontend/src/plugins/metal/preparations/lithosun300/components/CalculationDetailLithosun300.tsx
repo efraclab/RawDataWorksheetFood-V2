@@ -34,6 +34,7 @@ export default function CalculationDetailLithosun300({
   onUpdate: (value: CalculationLithosun300) => void;
 }) {
   const [expanded, setExpanded] = useState(true);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   const selected = useMemo(
     () => samplePreparations.find(
@@ -57,6 +58,27 @@ export default function CalculationDetailLithosun300({
 
   const calculate = () => {
     if (!selected || isLocked) return;
+    const required: Array<[string, unknown, boolean]> = [
+      ["Instrument Concentration (Blank)", common.blank, false],
+      ["Volume makeup (V1)", common.v1, true],
+      ["Volume taken (V2)", common.v2, true],
+      ["Volume makeup (V3)", common.v3, true],
+      ["Label Claim", common.labelClaim, true],
+      ["Conversion Factor", common.conversionFactor, true],
+    ];
+    const errors = required.flatMap(([label, value, positive]) => {
+      const raw = text(value).trim();
+      if (!raw) return [`${label} is required`];
+      const number = numberValue(value);
+      if (number === null) return [`${label} must be numeric`];
+      return positive && number <= 0 ? [`${label} must be greater than zero`] : [];
+    });
+    const sampleErrors = calculation.dissolutionSamples
+      .map((sample, index) => text(sample).trim() ? (numberValue(sample) === null ? `Dissolution Sample ${index + 1} must be numeric` : '') : `Dissolution Sample ${index + 1} is required`)
+      .filter(Boolean);
+    const allErrors = [...errors, ...sampleErrors];
+    setValidationErrors(allErrors);
+    if (allErrors.length > 0) return;
 
     const results = calculation.dissolutionSamples.map((sample) => {
       const result = calculateLithosun300({ sample, ...common });
@@ -198,6 +220,13 @@ export default function CalculationDetailLithosun300({
                   Limits are applied to each calculated tablet result: {minimum ?? '—'} to {maximum ?? '—'}.
                 </p>
               </div>
+
+              {validationErrors.length > 0 && (
+                <div className="rounded-lg border-2 border-red-200 bg-red-50 px-5 py-4" role="alert">
+                  <h4 className="mb-2 text-sm font-bold text-red-800">Validation Errors</h4>
+                  <ul className="space-y-1">{validationErrors.map((error) => <li key={error} className="text-xs text-red-700">• {error}</li>)}</ul>
+                </div>
+              )}
 
               <div className="text-center">
                 <button

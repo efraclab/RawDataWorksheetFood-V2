@@ -13,3 +13,7 @@ export { waterPreparationRegistry } from "./preparation-engine/waterPreparationR
 export { waterPreparationModuleRegistry } from "./preparation-engine/waterPreparationModuleRegistry";
 export * from "./preparations/fluoride";
 export default waterPlugin;
+
+export * from "./preparations/cyanide";
+export * from "./preparations/nitrate";
+export * from "./preparations/tds";

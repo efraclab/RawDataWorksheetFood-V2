@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import CustomDropdown from "../../../../../shared/CustomDropdown";
-import type { CalculationFluoride } from "../models/CalculationFluoride";
-import type { SamplePreparationFluoride } from "../models/SamplePreparationFluoride";
-import { calculateFluoride } from "../calculation";
+import type { CalculationNitrate } from "../models/CalculationNitrate";
+import type { SamplePreparationNitrate } from "../models/SamplePreparationNitrate";
+import { calculateNitrate } from "../calculation";
 
 const text = (value: unknown) => (value == null ? "" : String(value));
 
@@ -14,20 +14,20 @@ const numberOrNull = (value: unknown) => {
   return text(value).trim() === "" || !Number.isFinite(parsed) ? null : parsed;
 };
 
-const step = (preparation: SamplePreparationFluoride | null, name: string) =>
+const step = (preparation: SamplePreparationNitrate | null, name: string) =>
   preparation?.steps.find(
     (item) => item.name.trim().toLowerCase() === name.trim().toLowerCase(),
   );
 
 interface Props {
-  calculation: CalculationFluoride;
-  samplePreparations: SamplePreparationFluoride[];
-  onUpdate: (calculation: CalculationFluoride) => void;
+  calculation: CalculationNitrate;
+  samplePreparations: SamplePreparationNitrate[];
+  onUpdate: (calculation: CalculationNitrate) => void;
   onRemove: () => void;
   isLocked: boolean;
 }
 
-export default function CalculationDetailFluoride({
+export default function CalculationDetailNitrate({
   calculation,
   samplePreparations,
   onUpdate,
@@ -71,16 +71,16 @@ export default function CalculationDetailFluoride({
         : [],
     );
 
-  const update = <K extends keyof CalculationFluoride>(
+  const update = <K extends keyof CalculationNitrate>(
     field: K,
-    value: CalculationFluoride[K],
+    value: CalculationNitrate[K],
   ) => onUpdate({ ...calculation, [field]: value });
 
   const runCalculation = () => {
     if (isLocked || !selected) return;
     if (errors.length > 0) return;
 
-    const result = calculateFluoride(values);
+    const result = calculateNitrate(values);
     onUpdate({
       ...calculation,
       selectedSamplePreparationLabel: selected.label,
@@ -108,7 +108,7 @@ export default function CalculationDetailFluoride({
           onClick={() => setExpanded((value) => !value)}
           className="font-semibold"
         >
-          {calculation.label} · Fluoride (as F)
+          {calculation.label} · Nitrate (as NO3)
         </button>
 
         <div className="flex gap-2">
@@ -200,7 +200,7 @@ export default function CalculationDetailFluoride({
               {calculation.calculationResult !== null && (
                 <div className="overflow-hidden rounded-lg border-2 border-emerald-300">
                   <div className="bg-gradient-to-r from-emerald-700 via-emerald-800 to-slate-900 px-4 py-2 font-bold text-white">
-                    Fluoride Result
+                    Nitrate Result
                   </div>
                   <div className="flex items-center gap-3 p-4 text-2xl font-bold">
                     <span>
