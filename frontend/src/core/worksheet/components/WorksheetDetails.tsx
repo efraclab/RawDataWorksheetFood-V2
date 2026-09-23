@@ -1756,7 +1756,7 @@ export default function WorksheetDetails({
         const rawModules = (preparationDraft?.modules ?? {}) as Record<string, any>;
 
         const normalizeType = (value: unknown) =>
-          String(value ?? "").trim().toLowerCase();
+          String(value ?? "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
 
         for (const definition of activePreparationRegistry) {
           const rawModule = rawModules[definition.id];

@@ -30,3 +30,8 @@ export * from "./preparations/mbas";
 export * from "./preparations/sulphide";
 export * from "./preparations/hexavalentChromium";
 export * from "./preparations/dissolvedOxygen";
+export * from "./preparations/oilGrease";
+export * from "./preparations/totalPhosphorus";
+export * from "./preparations/chloramines";
+export * from "./preparations/totalHardness";
+export * from "./preparations/cod";

@@ -113,16 +113,17 @@ const PreparationEngine = forwardRef<
             const matches = registry
                 .filter((definition) => {
                     const preparationType =
-                        definition.preparationType?.trim().toLowerCase();
+                        definition.preparationType?.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
                     const calculationType =
-                        definition.calculationType?.trim().toLowerCase();
+                        definition.calculationType?.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
 
                     const hasPreparation = Boolean(
                         preparationType &&
                         preparations.some((item: any) =>
                             String(item?.preparationType ?? "")
                                 .trim()
-                                .toLowerCase() === preparationType
+                                .toLowerCase()
+                                .replace(/[^a-z0-9]/g, "") === preparationType
                         )
                     );
 
@@ -131,7 +132,8 @@ const PreparationEngine = forwardRef<
                         calculations.some((item: any) =>
                             String(item?.calculationType ?? "")
                                 .trim()
-                                .toLowerCase() === calculationType
+                                .toLowerCase()
+                                .replace(/[^a-z0-9]/g, "") === calculationType
                         )
                     );
 

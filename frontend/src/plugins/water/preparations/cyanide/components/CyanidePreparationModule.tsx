@@ -171,10 +171,10 @@ const CyanidePreparationModule = forwardRef<PreparationModuleHandle<ModuleData, 
         if (!worksheet || typeof worksheet !== "object") return;
         const value = worksheet as { preparations?: unknown[]; calculations?: unknown[]; preparationCompletedAt?: unknown };
         const restoredPreparations = (value.preparations ?? [])
-          .filter((item) => String((item as Record<string, unknown>)?.preparationType ?? "").toLowerCase() === "cyanide")
+          .filter((item) => String((item as Record<string, unknown>)?.preparationType ?? "").toLowerCase().replace(/[^a-z0-9]/g, "") === "cyanide")
           .map((item, index) => restorePreparation({ ...(item as object), steps: parseUnknown((item as Record<string, unknown>).steps) }, index));
         const restoredCalculations = (value.calculations ?? [])
-          .filter((item) => String((item as Record<string, unknown>)?.calculationType ?? "").toLowerCase() === "cyanide")
+          .filter((item) => String((item as Record<string, unknown>)?.calculationType ?? "").toLowerCase().replace(/[^a-z0-9]/g, "") === "cyanide")
           .map((item) => {
             const source = item as Record<string, unknown>;
             const data = parseUnknown(source.data);

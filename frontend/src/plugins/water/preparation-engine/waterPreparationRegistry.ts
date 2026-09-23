@@ -15,6 +15,11 @@ import { mbasPreparationHandler } from "../preparations/mbas/handler";
 import { sulphidePreparationHandler } from "../preparations/sulphide/handler";
 import { hexavalentChromiumPreparationHandler } from "../preparations/hexavalentChromium/handler";
 import { dissolvedOxygenPreparationHandler } from "../preparations/dissolvedOxygen/handler";
+import { oilGreasePreparationHandler } from "../preparations/oilGrease/handler";
+import { totalPhosphorusPreparationHandler } from "../preparations/totalPhosphorus/handler";
+import { chloraminesPreparationHandler } from "../preparations/chloramines/handler";
+import { totalHardnessPreparationHandler } from "../preparations/totalHardness/handler";
+import { codPreparationHandler } from "../preparations/cod/handler";
 
 export const waterPreparationRegistry: readonly PreparationHandler[] = [
   fluoridePreparationHandler,
@@ -33,5 +38,10 @@ export const waterPreparationRegistry: readonly PreparationHandler[] = [
   sulphidePreparationHandler,
   hexavalentChromiumPreparationHandler,
   dissolvedOxygenPreparationHandler,
+  oilGreasePreparationHandler,
+  totalPhosphorusPreparationHandler,
+  chloraminesPreparationHandler,
+  totalHardnessPreparationHandler,
+  codPreparationHandler,
 
 ];
