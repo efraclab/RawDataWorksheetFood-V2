@@ -15,7 +15,6 @@ interface Props {
 export default function FluorideCalculationSection({
   calculations,
   samplePreparations,
-  canEditCalculations,
   onAdd,
   onRemove,
   onUpdate,
@@ -43,7 +42,7 @@ export default function FluorideCalculationSection({
           <button
             type="button"
             onClick={onAdd}
-            disabled={!canEditCalculations}
+            disabled={false}
             className="flex items-center gap-2 rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:bg-emerald-800 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-40"
           >
             <span className="text-base leading-none">+</span>
@@ -70,7 +69,7 @@ export default function FluorideCalculationSection({
                 samplePreparations={samplePreparations}
                 onRemove={() => onRemove(calculation.id)}
                 onUpdate={onUpdate}
-                isLocked={!canEditCalculations}
+                isLocked={false}
               />
             ))}
           </div>

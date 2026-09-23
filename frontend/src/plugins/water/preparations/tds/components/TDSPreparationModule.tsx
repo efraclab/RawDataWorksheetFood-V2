@@ -40,6 +40,17 @@ const parseUnknown = (value: unknown): unknown => {
   try { return JSON.parse(value); } catch { return value; }
 };
 
+
+const unitForStep = (name: string): string => {
+  const normalized = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (normalized.includes("volumeofsample")) return "ml";
+  if (normalized.includes("initialwtofdish") || normalized.includes("finalwtofdish") || normalized.includes("initialweightofdish") || normalized.includes("finalweightofdish")) return "gm";
+  if (normalized.includes("volumeofagno3") || normalized.includes("volumeofh2so4") || normalized.includes("volumeofedta")) return "ml";
+  if (normalized.includes("strengthofagno3") || normalized.includes("strengthofh2so4")) return "N";
+  if (normalized.includes("strengthofedta")) return "M";
+  return "";
+};
+
 const normalizeDate = (value: unknown): string | null =>
   typeof value === "string" && value.trim() ? value : null;
 
@@ -229,7 +240,7 @@ const TDSPreparationModule = forwardRef<PreparationModuleHandle<ModuleData, unkn
                   <div key={step.name} className="grid items-center gap-3 rounded-lg border border-emerald-200 bg-white p-3 md:grid-cols-[minmax(0,1fr)_220px_70px]">
                     <label className="text-sm font-semibold text-emerald-900">{step.name}</label>
                     <input disabled={locked} value={step.value1 ?? ""} onChange={(event) => updateStep(preparation.id, step.name, "value1", event.target.value)} inputMode="decimal" placeholder="Enter value" className="rounded-lg border border-emerald-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
-                    <span className="text-xs font-semibold text-slate-500">{step.unit1 || "—"}</span>
+                    <span className="text-xs font-semibold text-slate-500">{step.unit1 || unitForStep(step.name) || "—"}</span>
                   </div>
                 ))}
               </div>
@@ -245,7 +256,6 @@ const TDSPreparationModule = forwardRef<PreparationModuleHandle<ModuleData, unkn
             <PreparationCompleteSection preparationName="Total Dissolved Solids (TDS)" isCompleted={completed} isLocked={locked} completedAt={completedAt} canUnlockPreparation={canUnlockPreparation} onComplete={() => setShowComplete(true)} onUnlock={() => setShowUnlock(true)} />
           </div>
           {completed && <TDSCalculationSection calculations={calculations} samplePreparations={samplePreparations} canEditCalculations={canEditCalculations} onAdd={() => {
-            if (!canEditCalculations) return;
             setCalculations((items) => [...items, { ...createCalculationTDS(items.length), selectedSamplePreparationLabel: samplePreparations[0]?.label ?? null }]);
           }} onRemove={(id) => setCalculations((items) => items.filter((item) => item.id !== id))} onUpdate={(value) => setCalculations((items) => items.map((item) => item.id === value.id ? value : item))} />}
         </>}

@@ -17,3 +17,10 @@ export default waterPlugin;
 export * from "./preparations/cyanide";
 export * from "./preparations/nitrate";
 export * from "./preparations/tds";
+
+export * from "./preparations/nitrite";
+export * from "./preparations/sulphate";
+export * from "./preparations/chloride";
+export * from "./preparations/alkalinity";
+export * from "./preparations/calcium";
+export * from "./preparations/magnesium";

@@ -3,6 +3,17 @@ import { ChevronDown, FlaskConical, Trash } from "lucide-react";
 import { motion } from "framer-motion";
 import type { SamplePreparationTDS, SamplePreparationTDSStep } from "../models/SamplePreparationTDS";
 
+
+const unitForStep = (name: string): string => {
+  const normalized = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (normalized.includes("volumeofsample")) return "ml";
+  if (normalized.includes("initialwtofdish") || normalized.includes("finalwtofdish") || normalized.includes("initialweightofdish") || normalized.includes("finalweightofdish")) return "gm";
+  if (normalized.includes("volumeofagno3") || normalized.includes("volumeofh2so4") || normalized.includes("volumeofedta")) return "ml";
+  if (normalized.includes("strengthofagno3") || normalized.includes("strengthofh2so4")) return "N";
+  if (normalized.includes("strengthofedta")) return "M";
+  return "";
+};
+
 interface Props {
   samplePreparation: SamplePreparationTDS;
   onStepChange: (samplePreparationId: number, stepName: string, field: keyof SamplePreparationTDSStep, newValue: string) => void;
@@ -30,7 +41,7 @@ const SamplePreparationDetailTDS: React.FC<Props> = ({ samplePreparation, onStep
         {samplePreparation.steps.map((step) => <div key={step.name} className="grid items-center gap-3 rounded-lg border border-emerald-200 bg-white p-3 md:grid-cols-[minmax(0,1fr)_220px_70px]">
           <label className="text-sm font-semibold text-emerald-900">{step.name}</label>
           <input value={step.value1 ?? ""} disabled={isLocked} placeholder="Enter value" onChange={(event) => onStepChange(samplePreparation.id, step.name, "value1", event.target.value)} className="rounded-lg border border-emerald-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
-          <span className="text-xs font-semibold text-slate-500">{step.unit1 || "—"}</span>
+          <span className="text-xs font-semibold text-slate-500">{step.unit1 || unitForStep(step.name) || "—"}</span>
         </div>)}
       </div>}
     </motion.div>

@@ -40,7 +40,7 @@ export default function CalculationDetailCyanide({
     () =>
       samplePreparations.find(
         (item) => item.label === calculation.selectedSamplePreparationLabel,
-      ) ?? null,
+      ) ?? samplePreparations[0] ?? null,
     [samplePreparations, calculation.selectedSamplePreparationLabel],
   );
 
@@ -189,7 +189,7 @@ export default function CalculationDetailCyanide({
               <div className="text-center">
                 <button
                   type="button"
-                  disabled={isLocked || errors.length > 0}
+                  disabled={!selected}
                   onClick={runCalculation}
                   className="rounded-lg bg-gradient-to-r from-emerald-700 to-slate-900 px-6 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
                 >

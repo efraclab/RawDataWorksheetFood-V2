@@ -245,7 +245,6 @@ const CyanidePreparationModule = forwardRef<PreparationModuleHandle<ModuleData, 
             <PreparationCompleteSection preparationName="Cyanide (as CN)" isCompleted={completed} isLocked={locked} completedAt={completedAt} canUnlockPreparation={canUnlockPreparation} onComplete={() => setShowComplete(true)} onUnlock={() => setShowUnlock(true)} />
           </div>
           {completed && <CyanideCalculationSection calculations={calculations} samplePreparations={samplePreparations} canEditCalculations={canEditCalculations} onAdd={() => {
-            if (!canEditCalculations) return;
             setCalculations((items) => [...items, { ...createCalculationCyanide(items.length), selectedSamplePreparationLabel: samplePreparations[0]?.label ?? null }]);
           }} onRemove={(id) => setCalculations((items) => items.filter((item) => item.id !== id))} onUpdate={(value) => setCalculations((items) => items.map((item) => item.id === value.id ? value : item))} />}
         </>}

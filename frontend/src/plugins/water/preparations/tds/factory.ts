@@ -22,9 +22,9 @@ export const createSamplePreparationTDS = (
   id: createId(index),
   label: `Sample Preparation ${index + 1}`,
   steps: [
-    createStep('Initial wt. of dish'),
-    createStep('Volume of sample'),
-    createStep('Final wt. of dish'),
+    createStep('Initial wt. of dish', 'gm'),
+    createStep('Volume of sample', 'ml'),
+    createStep('Final wt. of dish', 'gm'),
   ],
 });
 
