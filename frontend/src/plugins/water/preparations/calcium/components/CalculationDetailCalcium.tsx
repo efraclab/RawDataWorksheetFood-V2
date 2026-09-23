@@ -6,7 +6,7 @@ import type { SamplePreparationCalcium } from "../models/SamplePreparationCalciu
 import { calculateCalcium } from "../calculation";
 
 const text = (value: unknown) => (value == null ? "" : String(value));
-const truncateToThreeDecimals = (value: number) => Math.trunc(value * 1000) / 1000;
+const truncateToThreeDecimals = (value: number | null | undefined): number | null => value == null ? null : Math.trunc(value * 1000) / 1000;
 const numberOrNull = (value: unknown): number | null => {
   const raw = text(value).trim();
   if (raw === "") return null;
