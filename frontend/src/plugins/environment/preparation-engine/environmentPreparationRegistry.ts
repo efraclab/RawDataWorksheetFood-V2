@@ -24,6 +24,7 @@ import { soilGypsumRequirementPreparationHandler } from "../preparations/soilGyp
 import { soilMoisturePreparationHandler } from "../preparations/soilMoisture/handler";
 import { soilAvailablePhosphorousPreparationHandler } from "../preparations/soilAvailablePhosphorous/handler";
 import { soilOrganicCarbonMatterPreparationHandler } from "../preparations/soilOrganicCarbonMatter/handler";
+import { soilCa2PlusPreparationHandler } from "../preparations/soilCa2Plus/handler";
 import { moistureCoalPreparationHandler } from "../preparations/moistureCoal/handler";
 import { volatileMatterPreparationHandler } from "../preparations/volatileMatter/handler";
 import { gcvPreparationHandler } from "../preparations/gcv/handler";
@@ -61,6 +62,7 @@ export const environmentPreparationRegistry: readonly PreparationHandler[] = [
   soilMoisturePreparationHandler,
   soilAvailablePhosphorousPreparationHandler,
   soilOrganicCarbonMatterPreparationHandler,
+  soilCa2PlusPreparationHandler,
   moistureCoalPreparationHandler,
   volatileMatterPreparationHandler,
   gcvPreparationHandler,

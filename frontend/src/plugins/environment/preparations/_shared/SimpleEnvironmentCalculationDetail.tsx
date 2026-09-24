@@ -51,6 +51,7 @@ export default function SimpleEnvironmentCalculationDetail({
   }, [config.fields, selected]);
 
   const errors = config.fields
+    .filter((field) => !field.compute)
     .filter((field) => {
       const value = numberOrNull(values[field.key]);
       return value === null;
