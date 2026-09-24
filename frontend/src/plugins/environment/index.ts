@@ -36,6 +36,7 @@ export * from "./preparations/soilAvailableSulphur";
 export * from "./preparations/soilGypsumRequirement";
 export * from "./preparations/soilMoisture";
 export * from "./preparations/soilAvailablePhosphorous";
+export * from "./preparations/soilOrganicCarbonMatter";
 export * from "./preparations/moistureCoal";
 export * from "./preparations/volatileMatter";
 export * from "./preparations/gcv";

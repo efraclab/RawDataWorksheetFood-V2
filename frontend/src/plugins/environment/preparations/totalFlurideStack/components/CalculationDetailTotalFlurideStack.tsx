@@ -1,8 +1,11 @@
 import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import CustomDropdown from "../../../../shared/CustomDropdown";
+import CustomDropdown from "../../../../../shared/CustomDropdown";
 import type { SimpleEnvironmentCalculation, SimpleEnvironmentSamplePreparation } from "../../_shared/types";
-import { calculateTotalFluorideStack } from "../calculation";
+import {
+  calculateTotalFluorideStack,
+  type TotalFluorideStackCalculationInput,
+} from "../calculation";
 import { totalFlurideStackConfig } from "../config";
 
 const text = (value: unknown) => (value == null ? "" : String(value));
@@ -52,10 +55,22 @@ export default function CalculationDetailTotalFlurideStack({
     .filter((field) => field.readOnly || field.compute ? false : numberOrNull(values[field.key]) === null)
     .map((field) => `${field.name} is required and must be numeric`);
 
-  const liveCalculation = useMemo(
-    () => errors.length ? { success: false, result: null as number | null } : calculateTotalFluorideStack(values),
-    [values, errors.length],
-  );
+const liveCalculation = useMemo(() => {
+  if (errors.length) {
+    return { success: false, result: null as number | null };
+  }
+
+  const input: TotalFluorideStackCalculationInput = {
+    ft: values.ft,
+    m: values.m,
+    vt: values.vt,
+    at: values.at,
+    vd: values.vd,
+    vm: values.vm,
+  };
+
+  return calculateTotalFluorideStack(input);
+}, [values, errors.length]);
 
   // Do not allow an old persisted result (for example 1 mg/m³) to remain visible
   // after the preparation inputs have changed. The displayed/persisted result is
