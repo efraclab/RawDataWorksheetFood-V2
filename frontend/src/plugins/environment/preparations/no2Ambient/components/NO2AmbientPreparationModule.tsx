@@ -8,21 +8,21 @@ import PreparationCompleteSection from "../../../../../core/preparation-engine/c
 import PreparationToast from "../../../../../core/preparation-engine/components/PreparationToast";
 import SamplePreparationSection from "../../../../../core/preparation-engine/components/SamplePreparationSection";
 import UnlockPreparationDialog from "../../../../../core/preparation-engine/components/UnlockPreparationDialog";
-import type { SamplePreparationPM10, SamplePreparationPM10Step } from "../models/SamplePreparationPM10";
-import type { CalculationPM10 } from "../models/CalculationPM10";
-import { createCalculationPM10, createSamplePreparationPM10, restoreCalculationPM10 } from "../factory";
-import PM10CalculationSection from "./PM10CalculationSection";
-import SamplePreparationDetailPM10 from "./SamplePreparationDetailPM10";
+import type { SamplePreparationNO2Ambient, SamplePreparationNO2AmbientStep } from "../models/SamplePreparationNO2Ambient";
+import type { CalculationNO2Ambient } from "../models/CalculationNO2Ambient";
+import { createCalculationNO2Ambient, createSamplePreparationNO2Ambient, restoreCalculationNO2Ambient } from "../factory";
+import NO2AmbientCalculationSection from "./NO2AmbientCalculationSection";
+import SamplePreparationDetailNO2Ambient from "./SamplePreparationDetailNO2Ambient";
 
 type ModuleData = {
-  samplePreparations: SamplePreparationPM10[];
+  samplePreparations: SamplePreparationNO2Ambient[];
   files: PreparationAttachedFile[];
-  calculations: CalculationPM10[];
+  calculations: CalculationNO2Ambient[];
   completed: boolean;
   completedAt: string | null;
 };
 
-export interface PM10PreparationModuleProps {
+export interface NO2AmbientPreparationModuleProps {
   preparationId: string;
   parameterId: number;
   parameterName?: string | null;
@@ -49,10 +49,10 @@ const normalizeDate = (value: unknown): string | null =>
 const normalizeStepNameForRestore = (value: unknown): string =>
   String(value ?? "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
 
-const restorePreparation = (value: unknown, index: number): SamplePreparationPM10 => {
-  const source = (value && typeof value === "object" ? value : {}) as Partial<SamplePreparationPM10>;
-  const defaultSteps = createSamplePreparationPM10(index).steps;
-  const savedSteps = Array.isArray(source.steps) ? source.steps as SamplePreparationPM10Step[] : [];
+const restorePreparation = (value: unknown, index: number): SamplePreparationNO2Ambient => {
+  const source = (value && typeof value === "object" ? value : {}) as Partial<SamplePreparationNO2Ambient>;
+  const defaultSteps = createSamplePreparationNO2Ambient(index).steps;
+  const savedSteps = Array.isArray(source.steps) ? source.steps as SamplePreparationNO2AmbientStep[] : [];
   const steps = defaultSteps.map((defaultStep) => {
     const savedStep = savedSteps.find(
       (item) => normalizeStepNameForRestore(item.name) === normalizeStepNameForRestore(defaultStep.name),
@@ -60,7 +60,7 @@ const restorePreparation = (value: unknown, index: number): SamplePreparationPM1
     return savedStep ? { ...defaultStep, ...savedStep } : defaultStep;
   });
   return {
-    ...createSamplePreparationPM10(index),
+    ...createSamplePreparationNO2Ambient(index),
     ...source,
     id: typeof source.id === "number" ? source.id : index + 1,
     label: typeof source.label === "string" ? source.label : `Sample Preparation ${index + 1}`,
@@ -68,7 +68,7 @@ const restorePreparation = (value: unknown, index: number): SamplePreparationPM1
   };
 };
 
-const PM10PreparationModule = forwardRef<PreparationModuleHandle<ModuleData, unknown>, PM10PreparationModuleProps>(
+const NO2AmbientPreparationModule = forwardRef<PreparationModuleHandle<ModuleData, unknown>, NO2AmbientPreparationModuleProps>(
   (props, ref) => {
     const {
       parameterId, parameterName, parameterCode, isLocked,
@@ -76,9 +76,9 @@ const PM10PreparationModule = forwardRef<PreparationModuleHandle<ModuleData, unk
       onLockPreparation, onUnlockPreparation,
     } = props;
 
-    const [samplePreparations, setSamplePreparations] = useState<SamplePreparationPM10[]>([]);
+    const [samplePreparations, setSamplePreparations] = useState<SamplePreparationNO2Ambient[]>([]);
     const [files, setFiles] = useState<PreparationAttachedFile[]>([]);
-    const [calculations, setCalculations] = useState<CalculationPM10[]>([]);
+    const [calculations, setCalculations] = useState<CalculationNO2Ambient[]>([]);
     const [completed, setCompleted] = useState(false);
     const [completedAt, setCompletedAt] = useState<string | null>(null);
     const [showComplete, setShowComplete] = useState(false);
@@ -94,8 +94,8 @@ const PM10PreparationModule = forwardRef<PreparationModuleHandle<ModuleData, unk
 
     const addPreparation = () => {
       if (locked || samplePreparations.length >= 10) return;
-      setSamplePreparations((items) => [...items, createSamplePreparationPM10(items.length)]);
-      notify("PM10 sample preparation added.");
+      setSamplePreparations((items) => [...items, createSamplePreparationNO2Ambient(items.length)]);
+      notify("NO2 Ambient sample preparation added.");
     };
 
     const removePreparation = (index: number) => {
@@ -111,7 +111,7 @@ const PM10PreparationModule = forwardRef<PreparationModuleHandle<ModuleData, unk
       }));
     };
 
-    const updateStep = (preparationId: number, stepName: string, field: keyof SamplePreparationPM10Step, value: string) => {
+    const updateStep = (preparationId: number, stepName: string, field: keyof SamplePreparationNO2AmbientStep, value: string) => {
       if (locked) return;
       setSamplePreparations((items) => items.map((item) =>
         item.id !== preparationId ? item : {
@@ -145,7 +145,7 @@ const PM10PreparationModule = forwardRef<PreparationModuleHandle<ModuleData, unk
       const now = new Date().toISOString();
       setCompleted(true); setCompletedAt(now); setShowComplete(false);
       onLockPreparation(parameterId);
-      notify("PM10 preparation marked as complete.");
+      notify("NO2 Ambient preparation marked as complete.");
     };
 
     const unlock = async () => {
@@ -154,11 +154,11 @@ const PM10PreparationModule = forwardRef<PreparationModuleHandle<ModuleData, unk
       try {
         setCompleted(false); setCompletedAt(null);
         onUnlockPreparation(parameterId); setShowUnlock(false);
-        notify("PM10 preparation unlocked successfully.");
+        notify("NO2 Ambient preparation unlocked successfully.");
       } finally { setUnlocking(false); }
     };
 
-    const withDefaultSelection = (items: CalculationPM10[], preparations: SamplePreparationPM10[]) =>
+    const withDefaultSelection = (items: CalculationNO2Ambient[], preparations: SamplePreparationNO2Ambient[]) =>
       items.map((item) => ({
         ...item,
         selectedSamplePreparationLabel: item.selectedSamplePreparationLabel ??
@@ -173,7 +173,7 @@ const PM10PreparationModule = forwardRef<PreparationModuleHandle<ModuleData, unk
         const restoredPreparations = Array.isArray(value.samplePreparations)
           ? value.samplePreparations.map((item, index) => restorePreparation(item, index)) : [];
         const restoredCalculations = Array.isArray(value.calculations)
-          ? value.calculations.map((item) => restoreCalculationPM10(item)) : [];
+          ? value.calculations.map((item) => restoreCalculationNO2Ambient(item)) : [];
         setSamplePreparations(restoredPreparations);
         setFiles(Array.isArray(value.files) ? value.files : []);
         setCalculations(withDefaultSelection(restoredCalculations, restoredPreparations));
@@ -184,14 +184,14 @@ const PM10PreparationModule = forwardRef<PreparationModuleHandle<ModuleData, unk
         if (!worksheet || typeof worksheet !== "object") return;
         const value = worksheet as { preparations?: unknown[]; calculations?: unknown[]; preparationCompletedAt?: unknown };
         const restoredPreparations = (value.preparations ?? [])
-          .filter((item) => String((item as Record<string, unknown>)?.preparationType ?? "").toLowerCase().replace(/[^a-z0-9]/g, "") === "pm10")
+          .filter((item) => String((item as Record<string, unknown>)?.preparationType ?? "").toLowerCase().replace(/[^a-z0-9]/g, "") === "no2ambient")
           .map((item, index) => restorePreparation({ ...(item as object), steps: parseUnknown((item as Record<string, unknown>).steps) }, index));
         const restoredCalculations = (value.calculations ?? [])
-          .filter((item) => String((item as Record<string, unknown>)?.calculationType ?? "").toLowerCase().replace(/[^a-z0-9]/g, "") === "pm10")
+          .filter((item) => String((item as Record<string, unknown>)?.calculationType ?? "").toLowerCase().replace(/[^a-z0-9]/g, "") === "no2ambient")
           .map((item) => {
             const source = item as Record<string, unknown>;
             const data = parseUnknown(source.data);
-            return restoreCalculationPM10(data);
+            return restoreCalculationNO2Ambient(data);
           });
         setSamplePreparations(restoredPreparations);
         setCalculations(withDefaultSelection(restoredCalculations, restoredPreparations));
@@ -210,8 +210,8 @@ const PM10PreparationModule = forwardRef<PreparationModuleHandle<ModuleData, unk
                 <BiTestTube className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-emerald-900">PM10 Analysis</h2>
-                <p className="text-sm text-emerald-600">Environment Laboratory • PM10 Testing</p>
+                <h2 className="text-2xl font-bold text-emerald-900">NO2 Ambient Analysis</h2>
+                <p className="text-sm text-emerald-600">Environment Laboratory • NO2 Ambient Testing</p>
               </div>
             </div>
             <div className="rounded-full bg-emerald-100 px-5 py-2 text-sm font-semibold text-emerald-700">
@@ -221,36 +221,36 @@ const PM10PreparationModule = forwardRef<PreparationModuleHandle<ModuleData, unk
         </div>
 
         <SamplePreparationSection
-          title="Sample Preparations for PM10"
+          title="Sample Preparations for NO2 Ambient"
           preparations={samplePreparations}
           isLocked={locked}
           onAddPreparation={addPreparation}
           onRemovePreparation={(_, index) => removePreparation(index)}
           renderPreparation={(preparation, index) => (
-            <SamplePreparationDetailPM10
+            <SamplePreparationDetailNO2Ambient
               samplePreparation={preparation}
               onStepChange={updateStep}
               onRemove={() => removePreparation(index)}
               role={props.role}
               isLocked={locked}
-              parameterType={parameterCode ?? parameterName ?? "PM10"}
+              parameterType={parameterCode ?? parameterName ?? "NO2Ambient"}
             />
           )}
         />
 
         {samplePreparations.length > 0 && <>
           <div className="mx-6 mb-6">
-            <FileAttachmentSection files={files} isLocked={locked} title="Attach PM10 Preparation Files (PDF)" maxFiles={10} onAttachFiles={addFiles} onRemoveFile={(_, index) => setFiles((items) => items.filter((__, i) => i !== index))} />
+            <FileAttachmentSection files={files} isLocked={locked} title="Attach NO2Ambient Preparation Files (PDF)" maxFiles={10} onAttachFiles={addFiles} onRemoveFile={(_, index) => setFiles((items) => items.filter((__, i) => i !== index))} />
           </div>
           <div className="mx-6">
-            <PreparationCompleteSection preparationName="PM10" isCompleted={completed} isLocked={locked} completedAt={completedAt} canUnlockPreparation={canUnlockPreparation} onComplete={() => setShowComplete(true)} onUnlock={() => setShowUnlock(true)} />
+            <PreparationCompleteSection preparationName="NO2 Ambient" isCompleted={completed} isLocked={locked} completedAt={completedAt} canUnlockPreparation={canUnlockPreparation} onComplete={() => setShowComplete(true)} onUnlock={() => setShowUnlock(true)} />
           </div>
-          {completed && <PM10CalculationSection calculations={calculations} samplePreparations={samplePreparations} canEditCalculations={canEditCalculations} onAdd={() => {
-            setCalculations((items) => [...items, { ...createCalculationPM10(items.length), selectedSamplePreparationLabel: samplePreparations[0]?.label ?? null }]);
+          {completed && <NO2AmbientCalculationSection calculations={calculations} samplePreparations={samplePreparations} canEditCalculations={canEditCalculations} onAdd={() => {
+            setCalculations((items) => [...items, { ...createCalculationNO2Ambient(items.length), selectedSamplePreparationLabel: samplePreparations[0]?.label ?? null }]);
           }} onRemove={(id) => setCalculations((items) => items.filter((item) => item.id !== id))} onUpdate={(value) => setCalculations((items) => items.map((item) => item.id === value.id ? value : item))} />}
         </>}
 
-        <PreparationCompleteModal isOpen={showComplete} preparationName="PM10" parameterName={parameterName} parameterCode={parameterCode} onConfirm={complete} onCancel={() => setShowComplete(false)} />
+        <PreparationCompleteModal isOpen={showComplete} preparationName="NO2 Ambient" parameterName={parameterName} parameterCode={parameterCode} onConfirm={complete} onCancel={() => setShowComplete(false)} />
         <UnlockPreparationDialog isOpen={showUnlock} isUnlocking={unlocking} parameterName={parameterName ?? ""} parameterCode={parameterCode ?? ""} onClose={() => setShowUnlock(false)} onConfirm={unlock} />
         <PreparationToast visible={toast.visible} type={toast.type} message={toast.message} onClose={() => setToast((value) => ({ ...value, visible: false }))} />
       </div>
@@ -258,5 +258,5 @@ const PM10PreparationModule = forwardRef<PreparationModuleHandle<ModuleData, unk
   },
 );
 
-PM10PreparationModule.displayName = "PM10PreparationModule";
-export default PM10PreparationModule;
+NO2AmbientPreparationModule.displayName = "NO2AmbientPreparationModule";
+export default NO2AmbientPreparationModule;

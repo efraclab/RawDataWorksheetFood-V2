@@ -12,3 +12,12 @@ export { environmentPlugin, environmentPreparationRegistry };
 export { environmentPreparationModuleRegistry } from "./preparation-engine/environmentPreparationModuleRegistry";
 export * from "./preparations/pm10";
 export default environmentPlugin;
+
+export * from "./preparations/pm25";
+export * from "./preparations/so2Ambient";
+export * from "./preparations/no2Ambient";
+export * from "./preparations/o3Ambient";
+export * from "./preparations/nh3Ambient";
+export * from "./preparations/h2sAmbient";
+export * from "./preparations/chlorineAmbient";
+export * from "./preparations/totalFlurideAmbient";
