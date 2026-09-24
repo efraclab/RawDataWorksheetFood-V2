@@ -16,6 +16,23 @@ import { ammoniaStackPreparationHandler } from "../preparations/ammoniaStack/han
 import { hclStackPreparationHandler } from "../preparations/hclStack/handler";
 import { hfStackPreparationHandler } from "../preparations/hfStack/handler";
 import { h2sStackPreparationHandler } from "../preparations/h2sStack/handler";
+import { cs2StackPreparationHandler } from "../preparations/cs2Stack/handler";
+import { totalFlurideStackPreparationHandler } from "../preparations/totalFlurideStack/handler";
+import { soilTotalNitrogenPreparationHandler } from "../preparations/soilTotalNitrogen/handler";
+import { soilAvailableSulphurPreparationHandler } from "../preparations/soilAvailableSulphur/handler";
+import { soilGypsumRequirementPreparationHandler } from "../preparations/soilGypsumRequirement/handler";
+import { soilMoisturePreparationHandler } from "../preparations/soilMoisture/handler";
+import { soilAvailablePhosphorousPreparationHandler } from "../preparations/soilAvailablePhosphorous/handler";
+import { moistureCoalPreparationHandler } from "../preparations/moistureCoal/handler";
+import { volatileMatterPreparationHandler } from "../preparations/volatileMatter/handler";
+import { gcvPreparationHandler } from "../preparations/gcv/handler";
+import { ashPreparationHandler } from "../preparations/ash/handler";
+import { fixedCarbonPreparationHandler } from "../preparations/fixedCarbon/handler";
+import { decolourizingActivatedCarbonPreparationHandler } from "../preparations/decolourizingActivatedCarbon/handler";
+import { matterSolubleInWaterPreparationHandler } from "../preparations/matterSolubleInWater/handler";
+import { spmIAQPreparationHandler } from "../preparations/spmIAQ/handler";
+import { moistureVolatileSolventPreparationHandler } from "../preparations/moistureVolatileSolvent/handler";
+import { overallMigrationPackagingPreparationHandler } from "../preparations/overallMigrationPackaging/handler";
 
 export const environmentPreparationRegistry: readonly PreparationHandler[] = [
   pm10PreparationHandler,
@@ -35,4 +52,21 @@ export const environmentPreparationRegistry: readonly PreparationHandler[] = [
   hclStackPreparationHandler,
   hfStackPreparationHandler,
   h2sStackPreparationHandler,
+  cs2StackPreparationHandler,
+  totalFlurideStackPreparationHandler,
+  soilTotalNitrogenPreparationHandler,
+  soilAvailableSulphurPreparationHandler,
+  soilGypsumRequirementPreparationHandler,
+  soilMoisturePreparationHandler,
+  soilAvailablePhosphorousPreparationHandler,
+  moistureCoalPreparationHandler,
+  volatileMatterPreparationHandler,
+  gcvPreparationHandler,
+  ashPreparationHandler,
+  fixedCarbonPreparationHandler,
+  decolourizingActivatedCarbonPreparationHandler,
+  matterSolubleInWaterPreparationHandler,
+  spmIAQPreparationHandler,
+  moistureVolatileSolventPreparationHandler,
+  overallMigrationPackagingPreparationHandler,
 ];
