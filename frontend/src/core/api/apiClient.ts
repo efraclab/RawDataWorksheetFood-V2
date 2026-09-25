@@ -5,24 +5,34 @@ import axios from "axios";
  * V2 API CLIENT
  * ============================================================
  *
+ * Test Server
+ *
  * Browser
  *   ↓
- * http://localhost:5173/api
+ * V2 Frontend :5182
  *   ↓
- * Vite proxy
+ * Axios
  *   ↓
- * http://localhost:5162/api
+ * http://192.168.2.220:5183/api
+ *   ↓
+ * V1 Backend API
  *
- * This keeps the browser on the V2 frontend origin and avoids
- * the local HTTPS development certificate problem.
- *
- * IMPORTANT:
  * Existing V1 backend API contracts are NOT changed.
  * ============================================================
  */
 
+// ============================================================
+// API BASE URL
+// ============================================================
+
+// Local
+const API_BASE_URL = "http://localhost:5162/api";
+
+// Test Server
+//const API_BASE_URL = "http://192.168.2.220:5183/api";
+
 export const apiClient = axios.create({
-  baseURL: "/api",
+  baseURL: API_BASE_URL,
 
   headers: {
     "Content-Type": "application/json",

@@ -1,22 +1,39 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+import legacy from "@vitejs/plugin-legacy";
 
 export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+
+    legacy({
+      targets: ["defaults", "not IE 11"],
+    }),
   ],
 
   server: {
-    host: "0.0.0.0",
+    host: true,
 
-    proxy: {
-      "/api": {
-        target: "https://localhost:7078",
-        changeOrigin: true,
-        secure: false,
-      },
-    },
+    // ============================================================
+    // LOCAL SERVER
+    // ============================================================
+
+    // Local V2 runs on:
+    // http://localhost:5173
+
+    // ============================================================
+    // TEST SERVER
+    // ============================================================
+
+    // Uncomment these for Test Server
+    //
+    // port: 5182,
+    
+    // allowedHosts: [
+    //   "spotty-dogs-worry.loca.lt",
+    // ],
+
   },
 });
