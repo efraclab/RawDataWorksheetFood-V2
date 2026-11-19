@@ -24,12 +24,13 @@ import axios from "axios";
 // ============================================================
 // API BASE URL
 // ============================================================
-
-// Local
-const API_BASE_URL = "http://localhost:5162/api";
-
-// Test Server
-//const API_BASE_URL = "http://192.168.2.220:5183/api";
+//
+// npm run dev   (your laptop)  -> http://localhost:5162/api
+// npm run build (IIS server)   -> /api on the same site, e.g. http://192.168.2.220:8091/api
+//
+// The built frontend is served by the backend itself (wwwroot), so it can
+// call "/api" directly and works on any server IP or port without changes.
+const API_BASE_URL = import.meta.env.DEV ? "http://localhost:5162/api" : "/api";
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,

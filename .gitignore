@@ -9,6 +9,7 @@ bin/
 obj/
 **/bin/
 **/obj/
+publish
 
 # User-specific files
 *.user

@@ -79,11 +79,18 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("AllowReactApp");
 
+// Serve the built React app (frontend\dist copied into wwwroot by deploy.ps1).
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 //app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Any non-API address (e.g. /worksheet?lab=Micro after a page refresh) opens the React app.
+app.MapFallbackToFile("index.html");
 
 app.Run();
