@@ -95,7 +95,17 @@ const PreparationEngine = forwardRef<
         const [expandedGroups, setExpandedGroups] =
             useState<string[]>([]);
 
+        // Auto-restore of active groups from saved data must run only once
+        // per parameter. Otherwise removing the last group re-adds it,
+        // because the saved rows still exist until the worksheet is saved.
+        const autoRestoredRef = useRef(false);
+
         useEffect(() => {
+            autoRestoredRef.current = false;
+        }, [parameterId]);
+
+        useEffect(() => {
+            if (autoRestoredRef.current) return;
             if (!worksheet || activeGroups.length > 0) return;
 
             const parameter = worksheet as any;
@@ -142,6 +152,7 @@ const PreparationEngine = forwardRef<
                 .map((definition) => definition.id);
 
             if (matches.length > 0) {
+                autoRestoredRef.current = true;
                 setActiveGroups(matches);
                 setExpandedGroups(matches);
             }
@@ -210,6 +221,8 @@ const PreparationEngine = forwardRef<
                 return;
             }
 
+            autoRestoredRef.current = true;
+
             setActiveGroups((current) => {
                 if (current.includes(preparationId)) {
                     return current;
@@ -244,6 +257,8 @@ const PreparationEngine = forwardRef<
             if (effectiveIsLocked) {
                 return;
             }
+
+            autoRestoredRef.current = true;
 
             setActiveGroups((current) =>
                 current.filter(
@@ -309,6 +324,7 @@ const PreparationEngine = forwardRef<
                     : [];
 
             pendingDraftRef.current = draft;
+            autoRestoredRef.current = true;
 
             setActiveGroups(groups);
             setExpandedGroups(groups);

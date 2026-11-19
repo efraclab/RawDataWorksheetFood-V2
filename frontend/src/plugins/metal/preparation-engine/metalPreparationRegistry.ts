@@ -13,6 +13,7 @@ import { meropenemPreparationHandler } from "../preparations/meropenem/handler";
 import { sfgcPreparationHandler } from "../preparations/sfgc/handler";
 import { lithosun300PreparationHandler } from "../preparations/lithosun300/handler";
 import { lithosun400PreparationHandler } from "../preparations/lithosun400/handler";
+import { sodiumLactatePreparationHandler } from "../preparations/sodiumLactate/handler";
 
 /**
  * All Metal laboratory preparation handlers.
@@ -38,4 +39,5 @@ export const metalPreparationRegistry: readonly PreparationHandler[] = [
   sfgcPreparationHandler,
   lithosun300PreparationHandler,
   lithosun400PreparationHandler,
+  sodiumLactatePreparationHandler,
 ];

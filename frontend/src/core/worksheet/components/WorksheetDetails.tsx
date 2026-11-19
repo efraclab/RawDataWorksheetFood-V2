@@ -504,8 +504,8 @@ export default function WorksheetDetails({
   );
 
   // Load the three V1 reference-data catalogues once when the worksheet
-  // opens. Promise.all preserves the independent catalogue semantics while
-  // keeping the UI responsive.
+  // opens. Promise.allSettled keeps each catalogue independent, so one
+  // failing endpoint (e.g. /api/standards) does not discard the others.
   useEffect(() => {
     let cancelled = false;
 
@@ -514,8 +514,8 @@ export default function WorksheetDetails({
       setReferenceDataError(null);
 
       try {
-        const [instrumentData, chemicalData, standardData] =
-          await Promise.all([
+        const [instrumentRes, chemicalRes, standardRes] =
+          await Promise.allSettled([
             worksheetService.getInstruments(),
             worksheetService.getChemicals(),
             worksheetService.getStandards(),
@@ -523,9 +523,24 @@ export default function WorksheetDetails({
 
         if (cancelled) return;
 
-        setInstruments(instrumentData);
-        setChemicals(chemicalData);
-        setStandards(standardData);
+        if (instrumentRes.status === "fulfilled") setInstruments(instrumentRes.value);
+        if (chemicalRes.status === "fulfilled") setChemicals(chemicalRes.value);
+        if (standardRes.status === "fulfilled") setStandards(standardRes.value);
+
+        const failed = [
+          instrumentRes.status === "rejected" && "instruments",
+          chemicalRes.status === "rejected" && "chemicals",
+          standardRes.status === "rejected" && "standards",
+        ].filter(Boolean);
+
+        if (failed.length > 0) {
+          console.error("Error loading worksheet reference data:", {
+            instruments: instrumentRes.status === "rejected" ? instrumentRes.reason : null,
+            chemicals: chemicalRes.status === "rejected" ? chemicalRes.reason : null,
+            standards: standardRes.status === "rejected" ? standardRes.reason : null,
+          });
+          setReferenceDataError(`Failed to load: ${failed.join(", ")}.`);
+        }
       } catch (err: any) {
         if (cancelled) return;
 
@@ -638,7 +653,10 @@ export default function WorksheetDetails({
   await worksheetService.getAvailableParameters({
     regNo:
       worksheetData.sample?.registrationNo ?? "",
-    lab: displayLab,
+    lab:
+      (typeof worksheetData.sample?.lab === "string"
+        ? worksheetData.sample.lab
+        : lab) ?? "Food Lab",
   });
 
         if (cancelled) {
@@ -2616,20 +2634,6 @@ export default function WorksheetDetails({
             />
           )}
 
-
-          {selectedParameter && normalizedRole === "qa" &&
-            normalizedWorksheetStatus === "submitted for qa review" &&
-            selectedParameterStatus === "approved" && (
-              <div className="mb-4 flex justify-end relative z-30">
-                <button
-                  type="button"
-                  onClick={() => handleQARequestRevision(selectedParameter)}
-                  className="px-4 py-2 bg-white border border-amber-300 text-amber-700 text-sm font-semibold rounded-lg hover:bg-amber-50 transition-colors shadow-sm"
-                >
-                  Request Revision
-                </button>
-              </div>
-            )}
 
           {selectedParameter && normalizedRole === "qa" &&
             normalizedWorksheetStatus === "submitted for qa review" &&

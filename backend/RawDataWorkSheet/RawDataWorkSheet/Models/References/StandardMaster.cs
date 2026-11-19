@@ -11,7 +11,7 @@
         public string? Pack { get; set; }
         public decimal? UnitCode { get; set; }
         public string? Unit { get; set; }
-        public DateTime? Validity { get; set; }
+        public string? Validity { get; set; }
         public string? Remarks { get; set; }
     }
 }
