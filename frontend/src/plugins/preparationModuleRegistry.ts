@@ -1,0 +1,22 @@
+import type { PreparationModuleDefinition } from "../core/preparation/ui/PreparationModuleDefinition";
+import { foodPreparationModuleRegistry } from "./food/preparation-engine/foodPreparationModuleRegistry";
+import { metalPreparationModuleRegistry } from "./metal/preparation-engine/metalPreparationModuleRegistry";
+import { environmentPreparationModuleRegistry } from "./environment/preparation-engine/environmentPreparationModuleRegistry";
+import { waterPreparationModuleRegistry } from "./water/preparation-engine/waterPreparationModuleRegistry";
+import { microPreparationModuleRegistry } from "./micro/preparation-engine/microPreparationModuleRegistry";
+
+const normalizeLab = (value: unknown): string =>
+  String(value ?? "").trim().toLowerCase().replace(/[\s_-]+/g, "");
+
+export function getPreparationModuleRegistry(
+  laboratory: unknown,
+): readonly PreparationModuleDefinition[] {
+  const normalized = normalizeLab(laboratory);
+
+  if (normalized.includes("metal")) return metalPreparationModuleRegistry;
+  if (normalized.includes("water")) return waterPreparationModuleRegistry;
+  if (normalized.includes("environment") || normalized === "env" || normalized.startsWith("env")) return environmentPreparationModuleRegistry;
+  if (normalized.includes("micro")) return microPreparationModuleRegistry;
+
+  return foodPreparationModuleRegistry;
+}
