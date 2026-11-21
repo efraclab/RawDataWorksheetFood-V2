@@ -1,0 +1,46 @@
+import type { GasTestConfig } from "./reading/config";
+
+/**
+ * All Gas tests, in the order of the "Methods" sheet.
+ * To add a test: add one line here. Nothing else is needed.
+ */
+export const gasTests: readonly GasTestConfig[] = [
+  { key: "no", title: "NO", testName: "NO", kind: "detectorTube", instrument: "Detector Tube", method: "ISBT 7.0", unit: "ppm v/v" },
+  { key: "no2", title: "NO2", testName: "NO2", kind: "detectorTube", instrument: "Detector Tube", method: "ISBT 7.0", unit: "ppm v/v" },
+  { key: "phosphine", title: "Phosphine", testName: "Phosphine", kind: "detectorTube", instrument: "Detector Tube", method: "ISBT SM 3.0", unit: "ppm v/v" },
+  { key: "nvr", title: "NVR", testName: "Non-Volatile Residue (NVR)", kind: "nvr", instrument: "Balance", method: "ISBT 8.0", unit: "ppm w/w" },
+  { key: "moisture", title: "Moisture", testName: "Moisture", kind: "instrument", instrument: "Analyzer", method: "ISBT 3.0", unit: "ppm v/v" },
+  { key: "o2", title: "O2", testName: "O2", kind: "instrument", instrument: "PDHID", method: "ISBT 4.0", unit: "ppm v/v" },
+  { key: "nvor", title: "NVOR", testName: "Non-Volatile Organic Residue (NVOR)", kind: "nvor", instrument: "Balance", method: "ISBT 8.0", unit: "ppm w/w" },
+  { key: "co", title: "CO", testName: "CO", kind: "instrument", instrument: "Analyzer", method: "ISBT 5.0", unit: "ppm v/v" },
+  { key: "h2s", title: "H2S", testName: "H2S", kind: "instrument", instrument: "SCD", method: "ISBT 14.0", unit: "ppm v/v" },
+  { key: "assay", title: "Assay", testName: "Assay", kind: "observation", instrument: "KOH", method: "ISBT 2.0", unit: "% v/v" },
+  { key: "h2", title: "H2", testName: "H2", kind: "instrument", instrument: "PDHID", method: "ISBT 4.0", unit: "ppm v/v" },
+  { key: "n2", title: "N2", testName: "N2", kind: "instrument", instrument: "PDHID", method: "ISBT 4.0", unit: "ppm v/v" },
+  { key: "hcn", title: "HCN", testName: "HCN", kind: "detectorTube", instrument: "Detector Tube", method: "ISBT SM1.0", unit: "ppm v/v" },
+  { key: "tvh", title: "TVH", testName: "TVH (Total Hydrocarbon)", kind: "instrument", instrument: "Analyzer & GC-FID", method: "ISBT 10.0", unit: "ppb v/v" },
+  { key: "ch4", title: "CH4", testName: "CH4", kind: "instrument", instrument: "GC-FID", method: "ISBT 10.1", unit: "ppm v/v" },
+  { key: "ethane", title: "Ethane", testName: "Ethane", kind: "instrument", instrument: "GC-FID", method: "ISBT 10.1", unit: "ppm v/v" },
+  { key: "propane", title: "Propane", testName: "Propane", kind: "instrument", instrument: "GC-FID", method: "ISBT 10.1", unit: "ppm v/v" },
+  { key: "butane", title: "Butane", testName: "Butane", kind: "instrument", instrument: "GC-FID", method: "ISBT 10.1", unit: "ppm v/v" },
+  { key: "pentane", title: "Pentane", testName: "Pentane", kind: "instrument", instrument: "GC-FID", method: "ISBT 10.1", unit: "ppm v/v" },
+  { key: "hexane", title: "Hexane", testName: "Hexane", kind: "instrument", instrument: "GC-FID", method: "ISBT 10.1", unit: "ppm v/v" },
+  { key: "heptane", title: "Heptane", testName: "Heptane", kind: "instrument", instrument: "GC-FID", method: "ISBT 10.1", unit: "ppm v/v" },
+  { key: "unsaturatedHc", title: "Unsaturated HC", testName: "Unsaturated Hydrocarbon", kind: "instrument", instrument: "GC-FID", method: "ISBT 10.1", unit: "ppm v/v" },
+  { key: "aromaticHc", title: "Aromatic HC", testName: "Aromatic Hydrocarbon", kind: "instrument", instrument: "GC-FID", method: "ISBT 12.0", unit: "ppb v/v" },
+  { key: "etoh", title: "ETOH", testName: "Ethanol", kind: "instrument", instrument: "GC-FID", method: "ISBT 11.0", unit: "ppm v/v" },
+  { key: "vinylChloride", title: "Vinyl Chloride", testName: "Vinyl Chloride", kind: "detectorTube", instrument: "Detector Tube", method: "ISBT SM 2.0", unit: "ppm v/v" },
+  { key: "ethyleneOxide", title: "Ethylene Oxide", testName: "Ethylene Oxide", kind: "detectorTube", instrument: "Detector Tube", method: "ISBT 11.0", unit: "ppm v/v" },
+  { key: "totalVolatileOxygenates", title: "Total Volatile Oxygenates", testName: "Total Volatile Oxygenates", kind: "instrument", instrument: "GC FID", method: "ISBT 11.0", unit: "ppm v/v" },
+  { key: "totalNonSo2Sulphur", title: "Total Non SO2 \"S\"", testName: "Total Non SO2 Sulphur", kind: "instrument", instrument: "Analyzer & GC-FID", method: "ISBT 13.0", unit: "ppm v/v" },
+  { key: "so2", title: "SO2", testName: "SO2", kind: "instrument", instrument: "GC SCD", method: "ISBT 14.0", unit: "ppm v/v" },
+  { key: "carbonylSulphide", title: "Carboxyl Sulphide", testName: "Carboxyl Sulphide", kind: "instrument", instrument: "GC SCD", method: "ISBT 14.0", unit: "ppm v/v" },
+  { key: "mercaptan", title: "C1-C4 Mercaptan", testName: "C1-C4 Mercaptan", kind: "instrument", instrument: "GC SCD", method: "ISBT 14.0", unit: "ppm v/v" },
+  { key: "sulphides", title: "Sulphides", testName: "Sulphides", kind: "instrument", instrument: "GC SCD", method: "ISBT 14.0", unit: "ppm v/v" },
+  { key: "disulphides", title: "Di-sulphides", testName: "Di-sulphides", kind: "instrument", instrument: "GC SCD", method: "ISBT 14.0", unit: "ppm v/v" },
+  { key: "appearance", title: "Appearance", testName: "Appearance", kind: "text", instrument: "Physical", method: "ISBT 16.0", unit: "" },
+  { key: "tasteOdour", title: "Taste & Odour", testName: "Taste & Odour", kind: "text", instrument: "Physical", method: "ISBT 16.0", unit: "" },
+  { key: "nh3", title: "NH3", testName: "NH3", kind: "detectorTube", instrument: "Detector Tube", method: "ISBT 16.0", unit: "ppm v/v" },
+  { key: "acetaldehyde", title: "Acetaldehyde", testName: "Acetaldehyde", kind: "instrument", instrument: "FID", method: "ISBT 11.0", unit: "ppm v/v" },
+  { key: "meoh", title: "MeOH", testName: "Methanol", kind: "instrument", instrument: "FID", method: "ISBT 9.0", unit: "ppm v/v" },
+];
